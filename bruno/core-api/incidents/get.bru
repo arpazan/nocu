@@ -1,0 +1,21 @@
+meta {
+  name: Get
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{coreApiUrl}}/api/v1/incidents/{{incidentId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.id: eq {{incidentId}}
+}
+
+docs {
+  **400** `bad_request` when the id is not a UUID.
+  **404** `not_found` when no incident matches (soft-deleted ones are hidden).
+}

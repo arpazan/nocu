@@ -1,0 +1,35 @@
+meta {
+  name: Update (acknowledge)
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{coreApiUrl}}/api/v1/incidents/{{incidentId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "status": "acknowledged"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.status: eq acknowledged
+  res.body.data.acknowledged_at: isDefined
+}
+
+docs {
+  Partial update. Every field is optional; only present fields change.
+  Publishes `incident.updated`. Requires `operator` or `admin`.
+
+  ```json
+  { "title": "...", "description": "...", "severity": "high", "status": "acknowledged" }
+  ```
+
+  **400** `bad_request` on empty title or unknown severity/status.
+  **409** `conflict` on an illegal status transition, e.g. `acknowledged -> open`.
+}

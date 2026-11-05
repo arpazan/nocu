@@ -1,0 +1,22 @@
+meta {
+  name: Delete
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{coreApiUrl}}/api/v1/monitors/{{monitorId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Soft-deletes the monitor, stops probing it and publishes `monitor.deleted` with `{ "id": "..." }`.
+  Requires `admin`.
+
+  **404** `not_found` when already deleted or unknown.
+}

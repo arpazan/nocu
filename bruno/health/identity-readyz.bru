@@ -1,0 +1,20 @@
+meta {
+  name: identity readyz
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{identityUrl}}/readyz
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.database: eq ok
+}
+
+docs {
+  Response: `{ "database": "ok" }`. Status 503 when the database ping fails.
+}

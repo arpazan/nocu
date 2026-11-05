@@ -1,0 +1,23 @@
+meta {
+  name: Resume
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{coreApiUrl}}/api/v1/monitors/{{monitorId}}/resume
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.active: eq true
+}
+
+docs {
+  Sets `active: true` and schedules the next probe. Publishes `monitor.updated`.
+  Requires `operator` or `admin`.
+
+  **404** `not_found` when the monitor does not exist.
+}

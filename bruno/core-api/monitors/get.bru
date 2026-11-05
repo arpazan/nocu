@@ -1,0 +1,23 @@
+meta {
+  name: Get
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{coreApiUrl}}/api/v1/monitors/{{monitorId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.id: eq {{monitorId}}
+}
+
+docs {
+  Returns one monitor with its `notifications`.
+
+  **400** `bad_request` when the id is not a UUID.
+  **404** `not_found` when no monitor matches (soft-deleted ones are hidden).
+}

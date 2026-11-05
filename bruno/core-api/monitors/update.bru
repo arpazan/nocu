@@ -1,0 +1,54 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{coreApiUrl}}/api/v1/monitors/{{monitorId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Public website (renamed)",
+    "interval_seconds": 120,
+    "timeout_seconds": 45,
+    "auth_method": "bearer",
+    "bearer_token": "eyJhbGciOi...",
+    "notifications": [
+      {
+        "type": "webhook",
+        "enabled": true,
+        "config": {
+          "post_url": "https://hooks.example.com/nocu",
+          "http_method": "POST",
+          "request_body": "custom",
+          "custom_body": "{\"text\": \"{{monitor_name}} is {{status}}: {{message}}\"}",
+          "additional_headers": { "Content-Type": "application/json" }
+        }
+      }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.interval_seconds: eq 120
+  res.body.data.has_bearer_token: eq true
+}
+
+docs {
+  Partial update. Every field is optional; only present fields change. The same validation
+  rules as create apply to the merged result (for example a new `interval_seconds` must still
+  exceed the stored `timeout_seconds`). Publishes `monitor.updated`. Requires `operator` or `admin`.
+
+  Secrets: omit `basic_password` / `bearer_token` to keep them, send `""` to clear them.
+
+  `notifications`, when present, replaces the entire set; existing channel ids are discarded.
+  Omit the key to leave channels untouched.
+
+  **400** `bad_request` on any validation failure.
+  **404** `not_found` when the monitor does not exist.
+}

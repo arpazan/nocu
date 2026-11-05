@@ -1,0 +1,41 @@
+meta {
+  name: List
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{coreApiUrl}}/api/v1/monitors?limit=20&offset=0
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 20
+  offset: 0
+  ~active: true
+  ~status: up
+}
+
+assert {
+  res.status: eq 200
+  res.body.meta.limit: eq 20
+}
+
+docs {
+  Pages through monitors, newest first.
+  
+  | Query  | Default | Notes                              |
+  |--------|---------|------------------------------------|
+  | active | all     | `true` or `false`                  |
+  | status | all     | `pending`, `up` or `down`          |
+  | limit  | 50      | max 200                            |
+  | offset | 0       |                                    |
+  
+  **200**
+  ```json
+  { "data": [ ...monitors ], "meta": { "total": 3, "limit": 20, "offset": 0 } }
+  ```
+  
+  **400** `bad_request` on an unknown status or a non-boolean `active`.
+}

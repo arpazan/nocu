@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1.7
+# Build:  docker build -f build/Dockerfile.consumer -t nocu/consumer .
+# Context must be the repository root so the shared packages are available.
+
+FROM golang:1.26-alpine AS builder
+WORKDIR /src
+RUN apk add --no-cache ca-certificates tzdata
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/consumer ./services/consumer/cmd
+
+FROM gcr.io/distroless/static-debian12:nonroot
+WORKDIR /app
+COPY --from=builder /out/consumer /app/consumer
+USER nonroot:nonroot
+ENTRYPOINT ["/app/consumer"]

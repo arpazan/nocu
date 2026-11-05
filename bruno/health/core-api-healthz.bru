@@ -1,0 +1,16 @@
+meta {
+  name: core-api healthz
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{coreApiUrl}}/healthz
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+}

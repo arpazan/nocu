@@ -1,0 +1,51 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+docs {
+  # Nocu API
+
+  Two HTTP services share one JWT secret:
+
+  | Service  | Base URL (local)       | Purpose                                   |
+  |----------|------------------------|-------------------------------------------|
+  | identity | {{identityUrl}}        | register, login, refresh, current user    |
+  | core-api | {{coreApiUrl}}         | incidents CRUD, WebSocket event stream    |
+
+  ## Flow
+
+  1. `identity / Register` creates a user (gets the `viewer` role).
+  2. `identity / Login` stores `accessToken` and `refreshToken` in the environment.
+     Every other request inherits the bearer token from the collection.
+  3. `core-api / incidents / Create` needs `operator` or `admin`. Grant it in SQL, then log in again:
+
+     ```sql
+     INSERT INTO user_roles (user_id, role_id)
+     SELECT u.id, r.id FROM users u, roles r
+     WHERE u.email = 'ops@example.com' AND r.name = 'operator';
+     ```
+
+  ## Response envelope
+
+  Success: `{ "data": ... , "meta": { "total", "limit", "offset" } }` (meta only on lists).
+
+  Error: `{ "error": { "code": "not_found", "message": "incident not found" } }`
+
+  Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `internal_error`.
+
+  ## WebSocket
+
+  `GET {{coreApiUrl}}/api/v1/ws?token=<accessToken>` upgrades to a WebSocket.
+  The server sends `{"type":"hello"}` then one frame per broker event:
+
+  ```json
+  { "type": "event", "subject": "incident.created", "payload": { "type": "incident.created", "occurred_at": "...", "source": "core-api", "data": { ...incident } } }
+  ```
+
+  Subjects: `incident.created`, `incident.updated`, `incident.deleted`, `incident.sla_breached`,
+  `job.heartbeat`, `job.completed`, `job.failed`.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Update (close)
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{coreApiUrl}}/api/v1/incidents/{{incidentId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "status": "closed"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.status: eq closed
+  res.body.data.closed_at: isDefined
+}

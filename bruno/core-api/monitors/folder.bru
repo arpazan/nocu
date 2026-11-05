@@ -1,0 +1,101 @@
+meta {
+  name: monitors
+  seq: 2
+}
+
+docs {
+  Uptime monitor API. A monitor probes one `http://` or `https://` URL every `interval_seconds`
+  from the scheduler service, records a heartbeat per probe, and publishes `monitor.up` /
+  `monitor.down` when the status flips. Those events reach WebSocket clients and the configured
+  notification channels.
+
+  Monitor shape:
+
+  ```json
+  {
+    "id": "uuid",
+    "type": "http",
+    "name": "Public website",
+    "url": "https://example.com/health",
+    "interval_seconds": 60,
+    "retries": 1,
+    "timeout_seconds": 30,
+    "active": true,
+    "owner_id": "uuid",
+    "cert_expiry_notification": true,
+    "domain_expiry_notification": false,
+    "max_redirects": 10,
+    "save_error_response": false,
+    "method": "GET",
+    "body_encoding": "json",
+    "body": "",
+    "headers": { "X-Probe": "nocu" },
+    "auth_method": "none",
+    "basic_username": "",
+    "has_basic_password": false,
+    "has_bearer_token": false,
+    "last_status": "pending",
+    "last_checked_at": null,
+    "next_check_at": "...",
+    "failure_count": 0,
+    "cert_expires_at": null,
+    "domain_expires_at": null,
+    "notifications": [
+      { "id": "uuid", "monitor_id": "uuid", "type": "discord", "enabled": true, "config": { "...": "..." } }
+    ],
+    "created_at": "...",
+    "updated_at": "..."
+  }
+  ```
+
+  Field groups and rules:
+
+  | Group          | Field                        | Rules                                                      |
+  |----------------|------------------------------|------------------------------------------------------------|
+  | General        | type                         | `http` only                                                |
+  |                | name                         | required                                                   |
+  |                | url                          | required, `http` or `https`                                |
+  |                | interval_seconds             | default 60, minimum 20                                     |
+  |                | retries                      | default 0, consecutive failures tolerated before `down`    |
+  |                | timeout_seconds              | default 30, must be lower than `interval_seconds`          |
+  | Advanced       | cert_expiry_notification     | publish `monitor.cert_expiring` as the TLS cert nears expiry |
+  |                | domain_expiry_notification   | publish `monitor.domain_expiring` as the domain nears expiry |
+  |                | max_redirects                | default 10, `0` disables following redirects               |
+  |                | save_error_response          | keep the response body of failed probes on the heartbeat   |
+  | HTTP options   | method                       | default `GET`; `GET` `POST` `PUT` `PATCH` `DELETE` `HEAD` `OPTIONS` |
+  |                | body_encoding                | `json` (default) \| `form` \| `xml`                        |
+  |                | body                         | raw request body                                           |
+  |                | headers                      | JSON object of string values                               |
+  | Authentication | auth_method                  | `none` (default) \| `basic` \| `bearer`                    |
+  |                | basic_username / basic_password | required when `basic`                                   |
+  |                | bearer_token                 | required when `bearer`                                     |
+
+  Secrets are write-only. Send `basic_password` and `bearer_token` in create or update; responses
+  only carry `has_basic_password` and `has_bearer_token`. On `PATCH`, omitting a secret keeps the
+  stored value and sending `""` clears it.
+
+  `last_status`: `pending` | `up` | `down`.
+
+  Notification channels (`notifications[].type` and `config`):
+
+  | Type      | Config                                                                                                        |
+  |-----------|---------------------------------------------------------------------------------------------------------------|
+  | `discord` | `webhook_url` (https `discord.com/api/webhooks/...`), `bot_display_name`, `prefix_custom_message`, `message_format` (`text` default \| `embed`), `disable_url` |
+  | `webpush` | `endpoint`, `keys: { p256dh, auth }` — the object returned by `PushSubscription.toJSON()`                     |
+  | `webhook` | `post_url`, `http_method` (`POST` default \| `PUT` \| `PATCH`), `request_body` (`json` default \| `form` \| `custom`), `custom_body`, `additional_headers` |
+
+  `custom_body` may use the placeholders `{{monitor_name}}`, `{{monitor_url}}`, `{{status}}` and `{{message}}`.
+  Unknown config keys are rejected. A `PATCH` that includes `notifications` replaces the whole set.
+
+  Events:
+
+  | Subject                   | Publisher | Data                                                                  |
+  |---------------------------|-----------|-----------------------------------------------------------------------|
+  | `monitor.created`         | core-api  | the monitor                                                           |
+  | `monitor.updated`         | core-api  | the monitor                                                           |
+  | `monitor.deleted`         | core-api  | `{ "id": "..." }`                                                     |
+  | `monitor.up`              | scheduler | `monitor_id, name, url, status, message, http_status, latency_ms, checked_at` (status change only) |
+  | `monitor.down`            | scheduler | same as `monitor.up`                                                  |
+  | `monitor.cert_expiring`   | scheduler | `monitor_id, name, url, expires_at, days_left` (daily check)          |
+  | `monitor.domain_expiring` | scheduler | same as `monitor.cert_expiring`                                       |
+}

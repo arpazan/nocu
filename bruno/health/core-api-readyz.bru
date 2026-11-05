@@ -1,0 +1,21 @@
+meta {
+  name: core-api readyz
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{coreApiUrl}}/readyz
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.database: eq ok
+  res.body.nats: eq ok
+}
+
+docs {
+  Response: `{ "database": "ok", "nats": "ok" }`. Status 503 when either check fails.
+}

@@ -1,0 +1,33 @@
+# Air hot-reload config for consumer.
+# Run: make dev-consumer   (or: air -c .air/consumer.toml)
+root = "."
+tmp_dir = "tmp/air/consumer"
+
+[build]
+  cmd = "go build -o ./tmp/air/consumer/consumer ./services/consumer/cmd"
+  entrypoint = ["./tmp/air/consumer/consumer"]
+  # Watch the service itself plus everything it shares with the others.
+  include_dir = ["services/consumer", "shared"]
+  include_file = ["go.mod", "go.sum"]
+  include_ext = ["go"]
+  exclude_dir = ["bin", "tmp", "build", "bruno"]
+  exclude_regex = ["_test\\.go$"]
+  delay = 500
+  # Send SIGINT so the service shuts down gracefully before the rebuilt binary starts.
+  send_interrupt = true
+  kill_delay = "3s"
+  stop_on_error = true
+  rerun = false
+
+[log]
+  time = true
+  main_only = false
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true

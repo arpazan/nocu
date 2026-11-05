@@ -1,0 +1,37 @@
+meta {
+  name: Refresh
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{identityUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "refresh_token": "{{refreshToken}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setEnvVar("accessToken", res.body.data.access_token);
+    bru.setEnvVar("refreshToken", res.body.data.refresh_token);
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.access_token: isDefined
+}
+
+docs {
+  Exchanges a refresh token for a new pair. The user is re-read from the database,
+  so role changes and deactivation take effect here.
+
+  **400** `bad_request` when `refresh_token` is missing.
+  **401** `unauthorized` when the token is invalid, expired, or an access token was sent instead.
+}

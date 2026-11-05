@@ -1,0 +1,23 @@
+# Binaries
+/bin/
+/out/
+*.exe
+*.test
+*.out
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# Go
+vendor/
+coverage.*
+
+# Air hot-reload build output
+/tmp/

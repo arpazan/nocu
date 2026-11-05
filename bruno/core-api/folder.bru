@@ -1,0 +1,18 @@
+meta {
+  name: core-api
+  seq: 3
+}
+
+docs {
+  Incident and uptime monitor API. Base URL `{{coreApiUrl}}`, prefix `/api/v1`. Every route requires a bearer access token.
+
+  Roles:
+
+  | Action              | viewer | operator | admin |
+  |---------------------|--------|----------|-------|
+  | list / get          | yes    | yes      | yes   |
+  | create / update     |        | yes      | yes   |
+| pause / resume      |        | yes      | yes   |
+  | delete              |        |          | yes   |
+  | websocket           | yes    | yes      | yes   |
+}

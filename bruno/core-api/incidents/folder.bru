@@ -1,0 +1,31 @@
+meta {
+  name: incidents
+  seq: 1
+}
+
+docs {
+  Incident shape:
+
+  ```json
+  {
+    "id": "uuid",
+    "title": "Core router down",
+    "description": "",
+    "severity": "critical",
+    "status": "open",
+    "source": "snmp",
+    "reporter_id": "uuid",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "closed_at": null,
+    "created_at": "...",
+    "updated_at": "..."
+  }
+  ```
+
+  `severity`: `critical` | `high` | `medium` | `low`
+
+  `status` transitions: `open` -> `acknowledged` -> `resolved` -> `closed`.
+  Any non-closed status may jump straight to `closed`. `resolved` may reopen to `open`.
+  Each transition stamps the matching `*_at` timestamp.
+}

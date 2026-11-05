@@ -1,0 +1,117 @@
+name: nocu
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-development}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DATABASE_URL: postgres://${POSTGRES_USER:-nocu}:${POSTGRES_PASSWORD:-nocu}@postgres:5432/${POSTGRES_DB:-nocu}?sslmode=disable
+  NATS_URL: nats://nats:4222
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
+  JWT_ISSUER: nocu-identity
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nocu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nocu}
+      POSTGRES_DB: ${POSTGRES_DB:-nocu}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Postgres 18 images keep PGDATA under /var/lib/postgresql/18/docker, so mount the parent.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nocu} -d ${POSTGRES_DB:-nocu}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream", "--store_dir", "/data", "--http_port", "8222"]
+    ports:
+      - "${NATS_PORT:-4222}:4222"
+      - "${NATS_MONITOR_PORT:-8222}:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.migrate
+    environment:
+      <<: *app-env
+    command: ["up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  identity:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.identity
+    environment:
+      <<: *app-env
+      HTTP_PORT: 8081
+      SERVICE_NAME: identity
+    ports:
+      - "${IDENTITY_PORT:-8081}:8081"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  core-api:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.core-api
+    environment:
+      <<: *app-env
+      HTTP_PORT: 8080
+      SERVICE_NAME: core-api
+    ports:
+      - "${CORE_API_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  consumer:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.consumer
+    environment:
+      <<: *app-env
+      SERVICE_NAME: consumer
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.scheduler
+    environment:
+      <<: *app-env
+      SERVICE_NAME: scheduler
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  nats-data:

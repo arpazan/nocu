@@ -1,0 +1,87 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{coreApiUrl}}/api/v1/monitors
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "http",
+    "name": "Public website",
+    "url": "https://example.com/health",
+    "interval_seconds": 60,
+    "retries": 1,
+    "timeout_seconds": 30,
+    "cert_expiry_notification": true,
+    "domain_expiry_notification": false,
+    "max_redirects": 10,
+    "save_error_response": false,
+    "method": "GET",
+    "body_encoding": "json",
+    "body": "",
+    "headers": { "X-Probe": "nocu" },
+    "auth_method": "none",
+    "notifications": [
+      {
+        "type": "discord",
+        "enabled": true,
+        "config": {
+          "webhook_url": "https://discord.com/api/webhooks/123/abc",
+          "bot_display_name": "Nocu",
+          "prefix_custom_message": "[prod]",
+          "message_format": "embed",
+          "disable_url": false
+        }
+      },
+      {
+        "type": "webhook",
+        "enabled": true,
+        "config": {
+          "post_url": "https://hooks.example.com/nocu",
+          "http_method": "POST",
+          "request_body": "json",
+          "additional_headers": { "X-Token": "secret" }
+        }
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("monitorId", res.body.data.id);
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.data.last_status: eq pending
+  res.body.data.active: eq true
+}
+
+docs {
+  Creates a monitor with `last_status: pending`, schedules its first probe and publishes
+  `monitor.created`. Requires `operator` or `admin`. The post-response script stores the
+  new id in `monitorId`.
+
+  Only `name` and `url` are required; every other field falls back to its default (see the
+  folder docs). Include `basic_username` + `basic_password` for `auth_method: basic`, or
+  `bearer_token` for `auth_method: bearer`.
+
+  A `webpush` notification looks like:
+
+  ```json
+  { "type": "webpush", "enabled": true, "config": { "endpoint": "https://push.example/...", "keys": { "p256dh": "...", "auth": "..." } } }
+  ```
+
+  **400** `bad_request` on a missing name or url, non-http(s) url, interval below 20s,
+  timeout not lower than the interval, unknown method / encoding / auth method, non-object
+  headers, missing credentials for the chosen auth method, or an invalid notification config.
+  **403** `forbidden` for viewers.
+}

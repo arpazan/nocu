@@ -1,0 +1,45 @@
+meta {
+  name: Ws
+  type: ws
+  seq: 2
+}
+
+ws {
+  url: {{coreApiUrl}}/api/v1/ws?token={{accessToken}}
+  body: ws
+  auth: inherit
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+  
+  '''
+}
+
+docs {
+  Bruno sends this as a plain GET, so expect a 426 or 400 from the upgrader. It is here to document the endpoint. Connect with a real client instead:
+  
+  ```bash
+  websocat "ws://localhost:8080/api/v1/ws?token=$ACCESS_TOKEN"
+  ```
+  
+  or in a browser:
+  
+  ```js
+  const ws = new WebSocket(`ws://localhost:8080/api/v1/ws?token=${token}`);
+  ws.onmessage = (e) => console.log(JSON.parse(e.data));
+  ```
+  
+  Auth: `token` query param or `Authorization: Bearer` header (any role).
+  
+  Frames from the server:
+  
+  ```json
+  { "type": "hello", "user_id": "uuid", "at": "..." }
+  { "type": "event", "subject": "incident.created", "payload": { "type": "...", "occurred_at": "...", "source": "core-api", "data": { } } }
+  ```
+  
+  The server pings every 30 s and drops clients that fall more than 64 frames behind.
+}

@@ -1,0 +1,46 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{coreApiUrl}}/api/v1/incidents
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "Core router down",
+    "description": "BGP sessions dropped on edge-01",
+    "severity": "critical",
+    "source": "snmp"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("incidentId", res.body.data.id);
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.data.status: eq open
+}
+
+docs {
+  Creates an incident with status `open` and publishes `incident.created`.
+  Requires `operator` or `admin`. The post-response script stores the new id in `incidentId`.
+
+  | Field       | Rules                                     |
+  |-------------|-------------------------------------------|
+  | title       | required                                  |
+  | description | optional                                  |
+  | severity    | required, one of the four values          |
+  | source      | optional free text (e.g. snmp, manual)    |
+
+  **400** `bad_request` on missing title or unknown severity.
+  **403** `forbidden` for viewers.
+}

@@ -1,0 +1,49 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{identityUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "name": "{{name}}"
+  }
+}
+
+vars:pre-request {
+  identityUrl: localhost:8081
+  email: admin010@mail.com
+  password: P@ssw0rd
+  name: admin010
+}
+
+assert {
+  res.status: eq 201
+  res.body.data.email: eq {{email}}
+}
+
+docs {
+  Creates a user and grants the default role (`viewer`).
+  
+  | Field    | Rules                                   |
+  |----------|-----------------------------------------|
+  | email    | valid address, lower-cased, unique      |
+  | password | at least 8 characters (configurable)    |
+  | name     | optional                                |
+  
+  **201**
+  ```json
+  { "data": { "id": "uuid", "email": "ops@example.com", "name": "Ops", "is_active": true, "roles": ["viewer"], "created_at": "..." } }
+  ```
+  
+  **400** `bad_request` on invalid email or short password.
+  **409** `conflict` when the email is already registered.
+}

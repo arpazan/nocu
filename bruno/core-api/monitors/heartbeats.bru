@@ -1,0 +1,52 @@
+meta {
+  name: Heartbeats
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{coreApiUrl}}/api/v1/monitors/{{monitorId}}/heartbeats?important=true&limit=20&offset=0
+  body: none
+  auth: inherit
+}
+
+params:query {
+  important: true
+  limit: 20
+  offset: 0
+}
+
+assert {
+  res.status: eq 200
+  res.body.meta.limit: eq 20
+}
+
+docs {
+  Pages through the probe history of one monitor, newest first.
+
+  | Query     | Default | Notes                                                   |
+  |-----------|---------|---------------------------------------------------------|
+  | important | all     | `true` returns only heartbeats that changed the status  |
+  | limit     | 50      | max 200                                                 |
+  | offset    | 0       |                                                         |
+
+  Heartbeat shape:
+
+  ```json
+  {
+    "id": "uuid",
+    "monitor_id": "uuid",
+    "status": "down",
+    "latency_ms": 812,
+    "http_status": 503,
+    "message": "unexpected status 503",
+    "error_body": "...only when save_error_response is on...",
+    "important": true,
+    "checked_at": "...",
+    "created_at": "...",
+    "updated_at": "..."
+  }
+  ```
+
+  **404** `not_found` when the monitor does not exist.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Me
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{identityUrl}}/api/v1/me
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.email: eq {{email}}
+}
+
+docs {
+  Returns the profile of the bearer token's subject.
+
+  **200** same shape as Register.
+  **401** `unauthorized` when the token is missing, invalid, or expired.
+}

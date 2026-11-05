@@ -1,0 +1,41 @@
+meta {
+  name: List
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{coreApiUrl}}/api/v1/incidents
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~status: open
+  ~severity: critical
+  ~limit: 20
+  ~offset: 0
+}
+
+assert {
+  res.status: eq 200
+  res.body.meta.limit: eq 20
+}
+
+docs {
+  Pages through incidents, newest first.
+  
+  | Query    | Default | Notes                         |
+  |----------|---------|-------------------------------|
+  | status   | all     | one of the four statuses      |
+  | severity | all     | one of the four severities    |
+  | limit    | 50      | max 200                       |
+  | offset   | 0       |                               |
+  
+  **200**
+  ```json
+  { "data": [ ...incidents ], "meta": { "total": 12, "limit": 20, "offset": 0 } }
+  ```
+  
+  **400** `bad_request` on an unknown status or severity.
+}
