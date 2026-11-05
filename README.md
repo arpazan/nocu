@@ -1,11 +1,11 @@
 # Nocu
 
-Go monorepo for a NOC platform: an incident and uptime-monitor API with realtime WebSocket push, an identity service, an event consumer and a cron scheduler that probes monitors. PostgreSQL via GORM, NATS JetStream for messaging.
+Monorepo for a NOC platform: an incident and uptime-monitor API with realtime WebSocket push, an identity service, an event consumer and a cron scheduler that probes monitors, plus a Next.js web app. Go services use PostgreSQL via GORM and NATS JetStream for messaging.
 
 ## Layout
 
 ```
-build/              one Dockerfile per image (Dockerfile.core-api, .identity, .consumer, .scheduler, .migrate)
+build/              one Dockerfile per image (Dockerfile.core-api, .identity, .consumer, .scheduler, .migrate, .web)
 cmd/migrate/        migration CLI (up | down | status)
 services/<name>/
   cmd/main.go       service entrypoint
@@ -21,6 +21,11 @@ shared/
   messaging/        Publisher/Subscriber contract, NATS JetStream and in-memory impls
   migration/        versioned gormigrate migrations
   model/            GORM models (User, Role, Incident, Event, ScheduledJob, Monitor, MonitorNotification, MonitorHeartbeat)
+web/                Next.js app (App Router, Tailwind v4, shadcn/ui on Radix); pnpm workspace member
+  src/app/          routes (/, /login); /api/auth/* route handlers proxy identity and keep the refresh token in an httpOnly cookie
+  src/components/   app shell, theme toggle, login form, shadcn components under ui/
+  src/lib/api/      typed fetch client for the {data, meta} / {error} envelopes, TanStack Query options (health.ts)
+  src/lib/auth/     zod schemas, in-memory access-token store, server-side session helpers
 ```
 
 ## Services
@@ -31,12 +36,13 @@ shared/
 | core-api  | 8080 | incident CRUD, monitor CRUD and heartbeat history; `GET /api/v1/ws` pushes every `incident.*`, `job.*` and `monitor.*` event to clients |
 | consumer  |      | durable JetStream consumer; persists every message as an `events` row |
 | scheduler |      | cron jobs (heartbeat, SLA check, event cleanup, heartbeat cleanup), uptime probes and certificate/domain expiry checks, with Postgres advisory locks |
+| web       | 3000 | Next.js UI; talks to identity and core-api from the browser, so their `CORS_ORIGINS` must include the web origin outside development |
 
 ## Quick start
 
 ```bash
 cp .env.example .env
-docker compose up --build -d        # postgres, nats, migrate, then all four services
+docker compose up --build -d        # postgres, nats, migrate, the four Go services and web on :3000
 ```
 
 Register, log in, create an incident, and watch it arrive over WebSocket:
@@ -97,9 +103,26 @@ Secrets (`basic_password`, `bearer_token`) are write-only and never returned by 
 docker compose up -d postgres nats   # just the dependencies
 make migrate                         # apply migrations
 make dev                             # all four services with hot reload (Air)
-make test                            # unit tests
-make lint                            # gofmt + go vet
+make test                            # unit tests (Go + web)
+make lint                            # gofmt + go vet + web lint/typecheck
 ```
+
+### Frontend
+
+The web app lives in `web/` and is a [pnpm](https://pnpm.io) workspace member (`pnpm-workspace.yaml` at the root). It needs Node 24 (see `web/.nvmrc`).
+
+```bash
+make web-install                     # pnpm install --frozen-lockfile
+make dev-web                         # next dev on http://localhost:3000
+make web-lint && make web-test       # eslint + tsc, vitest
+make web-build                       # next build (standalone output)
+```
+
+With no `.env.local` the app targets `localhost:8081` (identity) and `localhost:8080` (core-api), which matches `docker compose up -d postgres nats` plus `make dev`. Copy `web/.env.example` to `web/.env.local` to point elsewhere. `NEXT_PUBLIC_*` values are baked into the browser bundle at build time, so `build/Dockerfile.web` takes them as build args and the compose file passes them through from `.env`.
+
+Add shadcn components with `cd web && pnpm dlx shadcn@latest add <name>`; they land in `web/src/components/ui/`.
+
+Data fetching uses [TanStack Query](https://tanstack.com/query): `QueryProvider` in the root layout owns one `QueryClient` per browser tab (defaults in `web/src/lib/query-client.ts`, which never retries 4xx responses), and devtools are available in development. Define queries with `queryOptions` next to the API code, as `web/src/lib/api/health.ts` does. Forms use [react-hook-form](https://react-hook-form.com) with [zod](https://zod.dev) schemas via `zodResolver`, rendered with shadcn's `Field` components (shadcn v4 replaced the old `Form` wrapper with `Field` plus `Controller`); `web/src/components/login-form.tsx` is the reference, including mapping backend `ApiError`s onto form errors. The access token returned by `/api/auth/login` is kept in memory in `web/src/lib/auth/session-store.ts`; a page reload gets a new one from `POST /api/auth/refresh`.
 
 ### Hot reload
 
@@ -124,11 +147,11 @@ Migrations live in `shared/migration` and run with gormigrate inside a transacti
 ## Docker images
 
 ```bash
-make docker-build                 # all five images
+make docker-build                 # all six images
 make docker-build-core-api        # one image
 ```
 
-Each Dockerfile is a two-stage build: `golang:1.26-alpine` compiles a static binary, and `gcr.io/distroless/static-debian12:nonroot` runs it. The build context must be the repository root.
+Each Go Dockerfile is a two-stage build: `golang:1.26-alpine` compiles a static binary, and `gcr.io/distroless/static-debian12:nonroot` runs it. `Dockerfile.web` installs the pnpm workspace, runs `next build` with `output: "standalone"`, and serves it from `node:24-alpine` as the `node` user. The build context must be the repository root.
 
 ## API documentation (Bruno)
 

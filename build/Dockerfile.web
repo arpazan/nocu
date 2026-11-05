@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1.7
+# Build:  docker build -f build/Dockerfile.web -t nocu/web .
+# Context must be the repository root: the pnpm workspace and lockfile live there.
+#
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so the
+# image is bound to the backend URLs it was built with. Pass them as build args.
+
+FROM node:24-alpine AS deps
+WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY web/package.json web/
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+FROM node:24-alpine AS builder
+WORKDIR /app
+RUN corepack enable
+ARG NEXT_PUBLIC_IDENTITY_URL=http://localhost:8081
+ARG NEXT_PUBLIC_CORE_API_URL=http://localhost:8080
+ARG NEXT_PUBLIC_WS_URL=ws://localhost:8080/api/v1/ws
+ENV NEXT_PUBLIC_IDENTITY_URL=$NEXT_PUBLIC_IDENTITY_URL \
+    NEXT_PUBLIC_CORE_API_URL=$NEXT_PUBLIC_CORE_API_URL \
+    NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY web ./web
+RUN pnpm --filter web build
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+# output: "standalone" in a workspace emits .next/standalone/web/server.js.
+COPY --from=builder --chown=node:node /app/web/.next/standalone ./
+COPY --from=builder --chown=node:node /app/web/.next/static ./web/.next/static
+COPY --from=builder --chown=node:node /app/web/public ./web/public
+EXPOSE 3000
+USER node
+CMD ["node", "web/server.js"]

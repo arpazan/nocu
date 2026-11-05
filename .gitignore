@@ -21,3 +21,10 @@ coverage.*
 
 # Air hot-reload build output
 /tmp/
+
+# Web (Next.js / pnpm)
+node_modules/
+/web/.next/
+/web/out/
+*.tsbuildinfo
+.pnpm-store/

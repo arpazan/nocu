@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T00:00:00Z",
+  "title": "Design System: Nocu",
+  "extensions": {
+    "colorMeta": {
+      "signal-orange": {
+        "role": "primary",
+        "displayName": "Signal Orange",
+        "canonical": "#f56e2c",
+        "dark": "#f56e2c",
+        "tonalRamp": [
+          "oklch(0.22 0.07 45)",
+          "oklch(0.34 0.11 45)",
+          "oklch(0.46 0.15 45)",
+          "oklch(0.58 0.18 45)",
+          "oklch(0.70 0.19 45)",
+          "oklch(0.80 0.13 45)",
+          "oklch(0.89 0.07 45)",
+          "oklch(0.96 0.03 45)"
+        ]
+      },
+      "signal-orange-deep": {
+        "role": "primary",
+        "displayName": "Signal Orange Deep",
+        "canonical": "#ca5c24",
+        "dark": "#e0692b",
+        "tonalRamp": [
+          "oklch(0.20 0.06 45)",
+          "oklch(0.31 0.10 45)",
+          "oklch(0.42 0.14 45)",
+          "oklch(0.53 0.17 45)",
+          "oklch(0.61 0.17 45)",
+          "oklch(0.74 0.12 45)",
+          "oklch(0.86 0.07 45)",
+          "oklch(0.95 0.03 45)"
+        ]
+      },
+      "on-signal": {
+        "role": "primary",
+        "displayName": "Ink on Signal",
+        "canonical": "oklch(0.145 0 0)",
+        "dark": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.30 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.60 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.93 0 0)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "warm-cream": {
+        "role": "secondary",
+        "displayName": "Warm Cream",
+        "canonical": "#fdf0dd",
+        "dark": "#3a2a1e",
+        "tonalRamp": [
+          "oklch(0.20 0.03 70)",
+          "oklch(0.32 0.04 70)",
+          "oklch(0.45 0.05 70)",
+          "oklch(0.58 0.06 70)",
+          "oklch(0.72 0.06 70)",
+          "oklch(0.84 0.05 70)",
+          "oklch(0.92 0.04 75)",
+          "oklch(0.96 0.03 80)"
+        ]
+      },
+      "on-warm-cream": {
+        "role": "secondary",
+        "displayName": "Cocoa",
+        "canonical": "#5a2e12",
+        "dark": "#fdf0dd",
+        "tonalRamp": [
+          "oklch(0.18 0.04 50)",
+          "oklch(0.26 0.06 50)",
+          "oklch(0.34 0.07 50)",
+          "oklch(0.44 0.08 50)",
+          "oklch(0.56 0.08 50)",
+          "oklch(0.70 0.07 55)",
+          "oklch(0.84 0.05 60)",
+          "oklch(0.95 0.02 70)"
+        ]
+      },
+      "clear-sky-blue": {
+        "role": "tertiary",
+        "displayName": "Clear Sky Blue",
+        "canonical": "#87aecd",
+        "dark": "#6f9cc0",
+        "tonalRamp": [
+          "oklch(0.20 0.04 240)",
+          "oklch(0.31 0.06 240)",
+          "oklch(0.43 0.07 240)",
+          "oklch(0.55 0.08 240)",
+          "oklch(0.66 0.07 240)",
+          "oklch(0.73 0.06 240)",
+          "oklch(0.86 0.04 240)",
+          "oklch(0.95 0.02 240)"
+        ]
+      },
+      "on-clear-sky-blue": {
+        "role": "tertiary",
+        "displayName": "Deep Navy",
+        "canonical": "#0f2a40",
+        "dark": "#0b1f30",
+        "tonalRamp": [
+          "oklch(0.15 0.03 240)",
+          "oklch(0.25 0.05 240)",
+          "oklch(0.35 0.06 240)",
+          "oklch(0.45 0.07 240)",
+          "oklch(0.56 0.07 240)",
+          "oklch(0.70 0.06 240)",
+          "oklch(0.84 0.04 240)",
+          "oklch(0.95 0.02 240)"
+        ]
+      },
+      "alarm-red": {
+        "role": "neutral",
+        "displayName": "Alarm Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "dark": "oklch(0.704 0.191 22.216)",
+        "tonalRamp": [
+          "oklch(0.20 0.08 27)",
+          "oklch(0.31 0.13 27)",
+          "oklch(0.42 0.18 27)",
+          "oklch(0.50 0.22 27)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.704 0.191 22.216)",
+          "oklch(0.85 0.09 27)",
+          "oklch(0.95 0.03 27)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "oklch(1 0 0)",
+        "dark": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.145 0 0)",
+          "oklch(0.205 0 0)",
+          "oklch(0.269 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.60 0 0)",
+          "oklch(0.80 0 0)",
+          "oklch(0.93 0 0)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.145 0 0)",
+        "dark": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.145 0 0)",
+          "oklch(0.205 0 0)",
+          "oklch(0.269 0 0)",
+          "oklch(0.40 0 0)",
+          "oklch(0.556 0 0)",
+          "oklch(0.708 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "oklch(0.556 0 0)",
+        "dark": "oklch(0.708 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.27 0 0)",
+          "oklch(0.40 0 0)",
+          "oklch(0.48 0 0)",
+          "oklch(0.556 0 0)",
+          "oklch(0.708 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Surface Muted",
+        "canonical": "oklch(0.97 0 0)",
+        "dark": "oklch(0.269 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.269 0 0)",
+          "oklch(0.40 0 0)",
+          "oklch(0.55 0 0)",
+          "oklch(0.70 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.93 0 0)",
+          "oklch(0.97 0 0)"
+        ]
+      },
+      "surface-sidebar": {
+        "role": "neutral",
+        "displayName": "Surface Sidebar",
+        "canonical": "oklch(0.985 0 0)",
+        "dark": "oklch(0.205 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.205 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.50 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.80 0 0)",
+          "oklch(0.92 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.922 0 0)",
+        "dark": "oklch(1 0 0 / 10%)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.30 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.60 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.922 0 0)",
+          "oklch(0.97 0 0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "One per page: the page title, monitor name, incident title, or the overview's live situation sentence."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings inside a page and card titles."
+      },
+      "section-label": {
+        "displayName": "Section Label",
+        "purpose": "Grey sentence-case heading over a list on the overview. Never uppercase or letter-spaced."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Table cells, rows, descriptions, and button labels (500 weight)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, secondary row lines, timestamps, field hints."
+      },
+      "nav": {
+        "displayName": "Nav",
+        "purpose": "Sidebar navigation labels only. One step above body so the three destinations stay readable from across a desk."
+      },
+      "data": {
+        "displayName": "Data (mono)",
+        "purpose": "Machine strings only: URLs, times, latency, request details."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popover",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "purpose": "Dropdown menus, selects, popovers floating above the page."
+      },
+      {
+        "name": "dialog",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Modal dialogs, alert dialogs, and the mobile navigation sheet, over a 50% black scrim."
+      },
+      {
+        "name": "active-tab",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "The selected trigger in a default tab list; the only in-page shadow."
+      },
+      {
+        "name": "card-ring",
+        "value": "0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent)",
+        "purpose": "Cards are bounded by this 1px ring instead of a shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-overlay",
+        "value": "100ms",
+        "purpose": "Fade and 95% zoom for tooltips, dropdowns, popovers, and dialogs entering or leaving."
+      },
+      {
+        "name": "duration-sheet",
+        "value": "200ms",
+        "purpose": "Slide for the mobile navigation sheet."
+      },
+      {
+        "name": "transition-colors",
+        "value": "color, background-color, border-color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default hover and state transitions on buttons, rows, nav items, inputs."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px)",
+        "purpose": "Buttons move down one pixel while active."
+      },
+      {
+        "name": "live-pulse",
+        "value": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "purpose": "The connection dot while live; disabled under prefers-reduced-motion. The only ambient animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one Signal Orange action on a view. 32px tall, 10px corners.",
+      "html": "<button class='ds-btn ds-btn-primary'>Create monitor</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; white-space: nowrap; cursor: pointer; outline: none; transition: background-color 150ms, color 150ms, border-color 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { border-color: var(--ring, #ca5c24); box-shadow: 0 0 0 2px var(--ring, #ca5c24); } .ds-btn:disabled { opacity: 0.5; pointer-events: none; } .ds-btn-primary { background: var(--primary, #f56e2c); color: var(--primary-foreground, oklch(0.145 0 0)); } .ds-btn-primary:hover { background: var(--primary-hover, #ca5c24); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Default secondary action: Paper fill, hairline border, muted wash on hover.",
+      "html": "<button class='ds-btn ds-btn-outline'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'/><path d='M21 3v5h-5'/><path d='M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'/><path d='M8 16H3v5'/></svg>Refresh</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; white-space: nowrap; cursor: pointer; outline: none; transition: background-color 150ms, color 150ms, border-color 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { border-color: var(--ring, #ca5c24); box-shadow: 0 0 0 2px var(--ring, #ca5c24); } .ds-btn-outline { background: var(--background, oklch(1 0 0)); color: var(--foreground, oklch(0.145 0 0)); border-color: var(--border, oklch(0.922 0 0)); } .ds-btn-outline:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-btn-outline svg { flex-shrink: 0; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Alarm Red as a 10% tint with red text, never a solid fill.",
+      "html": "<button class='ds-btn ds-btn-destructive'>Delete monitor</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; white-space: nowrap; cursor: pointer; outline: none; transition: background-color 150ms, color 150ms, border-color 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn-destructive { background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 10%, transparent); color: var(--destructive, oklch(0.577 0.245 27.325)); } .ds-btn-destructive:hover { background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); } .ds-btn-destructive:focus-visible { border-color: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 40%, transparent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); }"
+    },
+    {
+      "name": "Status Badges",
+      "kind": "chip",
+      "refersTo": "badge-healthy",
+      "description": "20px pills: blue Up, orange Down, cream Pending or Open, outline for neutral states.",
+      "html": "<span class='ds-badges'><span class='ds-badge ds-badge-healthy'>Up</span><span class='ds-badge ds-badge-signal'>Down</span><span class='ds-badge ds-badge-cream'>Open</span><span class='ds-badge ds-badge-outline'>Paused</span></span>",
+      "css": ".ds-badges { display: inline-flex; gap: 6px; align-items: center; } .ds-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 2px 8px; border: 1px solid transparent; border-radius: 26px; font-family: Manrope, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1rem; white-space: nowrap; } .ds-badge-healthy { background: var(--tertiary, #87aecd); color: var(--tertiary-foreground, #0f2a40); } .ds-badge-signal { background: var(--primary, #f56e2c); color: var(--primary-foreground, oklch(0.145 0 0)); } .ds-badge-cream { background: var(--secondary, #fdf0dd); color: var(--secondary-foreground, #5a2e12); } .ds-badge-outline { border-color: var(--border, oklch(0.922 0 0)); color: var(--foreground, oklch(0.145 0 0)); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "32px field with a hairline stroke; focus turns the stroke orange with a 3px ring.",
+      "html": "<label class='ds-field'><span class='ds-field-label'>Email</span><input class='ds-input' type='email' placeholder='ops@example.com'></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 8px; max-width: 320px; font-family: Manrope, system-ui, sans-serif; } .ds-field-label { font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; color: var(--foreground, oklch(0.145 0 0)); } .ds-input { height: 32px; width: 100%; padding: 4px 10px; border: 1px solid var(--input, oklch(0.922 0 0)); border-radius: 10px; background: transparent; font: inherit; font-size: 0.875rem; color: var(--foreground, oklch(0.145 0 0)); outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-input:focus-visible { border-color: var(--ring, #ca5c24); box-shadow: 0 0 0 2px var(--ring, #ca5c24); } .ds-input[aria-invalid='true'] { border-color: var(--destructive, oklch(0.577 0.245 27.325)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Brand mark plus three items; the active item is Ink text with a 3px Signal Orange marker on the sidebar's left edge.",
+      "html": "<nav class='ds-sidebar' aria-label='Primary'><a class='ds-brand' href='#'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2'/></svg>Nocu</a><a class='ds-nav-item' href='#'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><rect width='7' height='9' x='3' y='3' rx='1'/><rect width='7' height='5' x='14' y='3' rx='1'/><rect width='7' height='9' x='14' y='12' rx='1'/><rect width='7' height='5' x='3' y='16' rx='1'/></svg>Overview</a><a class='ds-nav-item ds-nav-item-active' href='#' aria-current='page'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2'/></svg>Monitors</a><a class='ds-nav-item' href='#'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M7 18v-6a5 5 0 1 1 10 0v6'/><path d='M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z'/><path d='M21 12h1'/><path d='M18.5 4.5 18 5'/><path d='M2 12h1'/><path d='M12 2v1'/><path d='m4.929 4.929.707.707'/><path d='M12 12v6'/></svg>Incidents</a></nav>",
+      "css": ".ds-sidebar { display: flex; flex-direction: column; gap: 2px; width: 256px; padding: 0 12px 12px; background: var(--sidebar, oklch(0.985 0 0)); border-right: 1px solid var(--sidebar-border, oklch(0.922 0 0)); font-family: Manrope, system-ui, sans-serif; } .ds-brand { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 12px; margin-bottom: 0; font-weight: 600; font-size: 1.125rem; letter-spacing: -0.025em; color: var(--sidebar-foreground, oklch(0.145 0 0)); text-decoration: none; } .ds-brand svg { color: var(--primary, #f56e2c); } .ds-nav-item { position: relative; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 8px; font-size: 1rem; font-weight: 500; color: var(--muted-foreground, oklch(0.556 0 0)); text-decoration: none; outline: none; transition: background-color 150ms, color 150ms; } .ds-nav-item::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 9999px 9999px 0; background: var(--primary, #f56e2c); opacity: 0; transition: opacity 150ms; } .ds-nav-item:hover { background: var(--sidebar-accent, #fdf0dd); color: var(--sidebar-accent-foreground, #5a2e12); } .ds-nav-item:focus-visible { box-shadow: 0 0 0 2px var(--ring, #ca5c24); } .ds-nav-item-active { color: var(--sidebar-foreground, oklch(0.145 0 0)); } .ds-nav-item-active::before { opacity: 1; } .ds-nav-item-active:hover { background: transparent; color: var(--sidebar-foreground, oklch(0.145 0 0)); }"
+    },
+    {
+      "name": "Attention Row",
+      "kind": "custom",
+      "refersTo": "nav-item",
+      "description": "A list row with a 6px status dot or 2px severity bar, a title, a mono detail line, and a grey timestamp. Hairline dividers, muted wash on hover.",
+      "html": "<ul class='ds-rows'><li><a class='ds-row' href='#'><span class='ds-dot ds-dot-down' aria-hidden='true'></span><span class='ds-row-main'><span class='ds-row-title'>Public website</span><span class='ds-row-mono'>https://example.com/health</span></span><span class='ds-row-meta'>down 4m ago</span></a></li><li><a class='ds-row' href='#'><span class='ds-bar ds-bar-critical' aria-hidden='true'></span><span class='ds-row-main'><span class='ds-row-title'>Core router down</span><span class='ds-row-sub'>Critical</span></span><span class='ds-row-meta'>Open</span></a></li><li><a class='ds-row' href='#'><span class='ds-dot ds-dot-up' aria-hidden='true'></span><span class='ds-row-main'><span class='ds-row-title'>Identity service</span><span class='ds-row-mono'>https://id.example.com/healthz</span></span><span class='ds-row-meta'>up 1m ago</span></a></li></ul>",
+      "css": ".ds-rows { list-style: none; margin: 0; padding: 0; max-width: 480px; font-family: Manrope, system-ui, sans-serif; } .ds-rows li + li { border-top: 1px solid var(--border, oklch(0.922 0 0)); } .ds-row { display: flex; align-items: stretch; gap: 12px; padding: 12px 0; border-radius: 8px; color: var(--foreground, oklch(0.145 0 0)); text-decoration: none; outline: none; transition: background-color 150ms; } .ds-row:hover { background: color-mix(in oklch, var(--muted, oklch(0.97 0 0)) 50%, transparent); } .ds-row:focus-visible { box-shadow: 0 0 0 2px var(--ring, #ca5c24); } .ds-dot { flex-shrink: 0; width: 6px; height: 6px; margin-top: 8px; border-radius: 9999px; } .ds-dot-up { background: var(--tertiary, #87aecd); } .ds-dot-down { background: var(--primary, #f56e2c); } .ds-dot-pending { background: color-mix(in oklch, var(--muted-foreground, oklch(0.556 0 0)) 40%, transparent); } .ds-bar { flex-shrink: 0; width: 2px; align-self: stretch; border-radius: 9999px; } .ds-bar-critical { background: var(--destructive, oklch(0.577 0.245 27.325)); } .ds-bar-high { background: var(--primary, #f56e2c); } .ds-bar-medium { background: var(--tertiary, #87aecd); } .ds-bar-low { background: color-mix(in oklch, var(--muted-foreground, oklch(0.556 0 0)) 40%, transparent); } .ds-row-main { min-width: 0; flex: 1; display: flex; flex-direction: column; } .ds-row-title { font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-mono { font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground, oklch(0.556 0 0)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-sub { font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-row-meta { flex-shrink: 0; align-self: center; font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground, oklch(0.556 0 0)); }"
+    },
+    {
+      "name": "Heartbeat Strip",
+      "kind": "custom",
+      "refersTo": "badge-healthy",
+      "description": "The last probes as 4px bars, newest right; height tracks latency, colour tracks status.",
+      "html": "<div class='ds-strip' role='img' aria-label='27 of 30 checks up'><span class='ds-hb ds-hb-empty' style='height:4px'></span><span class='ds-hb ds-hb-empty' style='height:4px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:10px'></span><span class='ds-hb ds-hb-up' style='height:7px'></span><span class='ds-hb ds-hb-up' style='height:12px'></span><span class='ds-hb ds-hb-up' style='height:9px'></span><span class='ds-hb ds-hb-down' style='height:24px'></span><span class='ds-hb ds-hb-down' style='height:24px'></span><span class='ds-hb ds-hb-up' style='height:11px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:9px'></span><span class='ds-hb ds-hb-up' style='height:6px'></span><span class='ds-hb ds-hb-up' style='height:14px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:7px'></span><span class='ds-hb ds-hb-up' style='height:10px'></span><span class='ds-hb ds-hb-down' style='height:24px'></span><span class='ds-hb ds-hb-up' style='height:9px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:13px'></span><span class='ds-hb ds-hb-up' style='height:7px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:6px'></span><span class='ds-hb ds-hb-up' style='height:9px'></span><span class='ds-hb ds-hb-up' style='height:11px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span><span class='ds-hb ds-hb-up' style='height:7px'></span><span class='ds-hb ds-hb-up' style='height:10px'></span><span class='ds-hb ds-hb-up' style='height:8px'></span></div>",
+      "css": ".ds-strip { display: flex; align-items: flex-end; gap: 2px; height: 24px; } .ds-hb { display: block; width: 4px; border-radius: 2px; } .ds-hb-up { background: var(--tertiary, #87aecd); } .ds-hb-down { background: var(--primary, #f56e2c); } .ds-hb-empty, .ds-hb-pending { background: var(--muted, oklch(0.97 0 0)); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Paper surface with a 1px 10% ring instead of a shadow, 14px corners, 16px padding.",
+      "html": "<div class='ds-card'><div class='ds-card-header'><div><div class='ds-card-title'>Backend services</div><div class='ds-card-desc'>Live /healthz checks from this browser, refreshed every 30s.</div></div></div><div class='ds-card-content'><div class='ds-card-row'><span><span class='ds-card-row-title'>core-api</span><span class='ds-card-row-mono'>http://localhost:8080/healthz</span></span><span class='ds-badge ds-badge-signal'>up</span></div></div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 16px; max-width: 420px; padding: 16px 0; border-radius: 14px; background: var(--card, oklch(1 0 0)); color: var(--card-foreground, oklch(0.145 0 0)); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground, oklch(0.145 0 0)) 10%, transparent); font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.25rem; } .ds-card-header { display: grid; gap: 4px; padding: 0 16px; } .ds-card-title { font-size: 1rem; font-weight: 500; line-height: 1.375; } .ds-card-desc { color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-card-content { padding: 0 16px; } .ds-card-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; } .ds-card-row-title { display: block; font-weight: 500; } .ds-card-row-mono { display: block; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-badge { display: inline-flex; align-items: center; height: 20px; padding: 2px 8px; border-radius: 26px; font-size: 0.75rem; font-weight: 500; line-height: 1rem; } .ds-badge-signal { background: var(--primary, #f56e2c); color: var(--primary-foreground, oklch(0.145 0 0)); }"
+    },
+    {
+      "name": "Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Inverted Ink surface with Paper label text; used for role gating and heartbeat details.",
+      "html": "<span class='ds-tip-wrap'><button class='ds-btn ds-btn-outline' disabled>Acknowledge</button><span class='ds-tip' role='tooltip'>Needs the operator role<span class='ds-tip-arrow' aria-hidden='true'></span></span></span>",
+      "css": ".ds-tip-wrap { position: relative; display: inline-flex; padding-top: 36px; font-family: Manrope, system-ui, sans-serif; } .ds-btn { display: inline-flex; align-items: center; height: 32px; padding: 0 10px; border: 1px solid var(--border, oklch(0.922 0 0)); border-radius: 10px; background: var(--background, oklch(1 0 0)); color: var(--foreground, oklch(0.145 0 0)); font: inherit; font-size: 0.875rem; font-weight: 500; } .ds-btn:disabled { opacity: 0.5; } .ds-tip { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px; background: var(--foreground, oklch(0.145 0 0)); color: var(--background, oklch(1 0 0)); font-size: 0.75rem; line-height: 1rem; white-space: nowrap; } .ds-tip-arrow { position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; border-radius: 2px; background: var(--foreground, oklch(0.145 0 0)); transform: translateX(-50%) rotate(45deg); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Control Room",
+    "overview": "Nocu is designed like a dimmed operations floor. At rest the whole interface is neutral: white paper, a barely-lighter sidebar, hairline dividers, and grey text at two weights. Nothing competes for the eye, because the eye is being saved for one thing. When a monitor goes down or an incident opens, a single hot colour appears, Signal Orange, and because it is the only saturated warm colour on screen, it cannot be missed. Healthy states are marked in a cool, low-chroma Clear Sky Blue so that \"fine\" reads as calm rather than celebratory. Everything else is grey. Attention is engineered by rarity.\n\nThe system is precise and warm at the same time. Precision comes from the geometry: thirty-two-pixel controls, ten-pixel corners, two-pixel severity bars, six-pixel status dots, monospace timestamps aligned in a fixed column, and surfaces bounded by a one-pixel hairline rather than a shadow. Warmth comes from the material: Manrope's rounded humanist letterforms, a Warm Cream tint for secondary surfaces and avatars, and an orange whose lightness keeps it from reading as danger. Red exists but is held back for the two places it is literally true: critical severity and destructive actions.\n\nDensity is moderate. Operators keep this screen open for a whole shift, so rows are tall enough to scan at a glance across a desk, but page chrome is minimal and in-page surfaces are flat. Motion is short and functional: overlays fade and scale in over a tenth of a second, buttons press down one pixel, and the only ambient animation is the live-connection dot's pulse. When the viewer prefers reduced motion the pulse stops and overlays keep only their fade: no slide, zoom, or icon rotation.",
+    "keyCharacteristics": [
+      "One saturated accent, Signal Orange, meaning \"needs you\"; its rarity is the whole point.",
+      "Cool blue for healthy, neutral grey for nothing to see, red only for critical and destructive.",
+      "Flat, hairline-bounded surfaces; shadows only on things floating above the page.",
+      "Thin marks (dots, bars, strips) instead of filled panels to carry status.",
+      "Manrope for everything human; Geist Mono for everything machine (URLs, times, latency).",
+      "Compact and exact controls: 32px tall, 10px corners, pill badges."
+    ],
+    "rules": [
+      {
+        "name": "The One Lamp Rule",
+        "body": "Signal Orange appears on a screen only where an operator is wanted: the primary action, the active nav marker, and down/high/critical status. It is never used for decoration, headings, icons at rest, or hover tints on neutral elements. If a screen has nothing wrong, the only orange on it is the active nav marker and at most one primary button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cool Means Fine Rule",
+        "body": "Healthy states use Clear Sky Blue, never green. Green is not in the palette and must not be introduced for \"up\" or \"success\"; success toasts stay neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Is Literal Rule",
+        "body": "Alarm Red is reserved for critical severity and destructive or invalid states. Warnings and \"down\" use Signal Orange, not red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Weights Rule",
+        "body": "Manrope is used at 400 and 500 for text and 600 for headings. Nothing is bold (700) and nothing is light (300).",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is a Value Rule",
+        "body": "Geist Mono is applied to machine-produced strings only. It is never used for headings, labels, or UI copy to look technical.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Floor Rule",
+        "body": "Nothing that scrolls with the page casts a shadow. If a new in-page surface needs separation, use the 10% ring or a Hairline border, or a tonal shift to Surface Muted.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Signal Orange to primary actions, the active nav marker, focus rings, and down/high/critical status; count the orange on a calm screen and expect one marker and at most one button.",
+      "Do use Clear Sky Blue for every \"up\" or healthy state and 40% Ink Soft for pending, idle, or low.",
+      "Do carry status with a 6px dot, a 2px bar, or a pill badge next to plain text, never with a tinted row or card background.",
+      "Do bound in-page surfaces with the 1px 10% ring or a Hairline border and reserve shadows for dropdowns, dialogs, and sheets.",
+      "Do set URLs, timestamps, latency, and other machine strings in Geist Mono at label size in Ink Soft.",
+      "Do keep controls at 32px tall with 10px corners and the shared orange focus ring; step the corner down with the size.",
+      "Do render a control the viewer cannot use as disabled with the \"Needs the operator role\" tooltip rather than hiding it.",
+      "Do write one grey sentence for an empty state and use height-matched skeletons for loading."
+    ],
+    "donts": [
+      "Don't introduce green, or any second saturated accent, for success, healthy, or online states.",
+      "Don't fill a button, badge, or row with solid Alarm Red; red is a 10% tint with red text for destructive actions and a 2px bar for critical severity.",
+      "Don't use orange on hover, icons at rest, headings, or decorative shapes.",
+      "Don't add shadows, gradients, glows, or blurred backdrops to cards, tables, panels, or the sidebar.",
+      "Don't use uppercase, letter-spaced, or eyebrow-style labels; section labels are sentence-case grey body text.",
+      "Don't use Manrope above 600 weight or below 400, and don't set headings in Geist Mono.",
+      "Don't wrap page-level lists or tables in cards; they sit directly on Paper with hairline dividers.",
+      "Don't animate anything ambiently except the live-connection dot, and keep overlay transitions at 100ms to 200ms."
+    ]
+  }
+}

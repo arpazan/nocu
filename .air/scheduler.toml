@@ -10,7 +10,7 @@ tmp_dir = "tmp/air/scheduler"
   include_dir = ["services/scheduler", "shared"]
   include_file = ["go.mod", "go.sum"]
   include_ext = ["go"]
-  exclude_dir = ["bin", "tmp", "build", "bruno"]
+  exclude_dir = ["bin", "tmp", "build", "bruno", "web", "node_modules"]
   exclude_regex = ["_test\\.go$"]
   delay = 500
   # Send SIGINT so the service shuts down gracefully before the rebuilt binary starts.

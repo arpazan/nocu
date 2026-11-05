@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 SERVICES := core-api identity consumer scheduler
-IMAGES   := $(SERVICES) migrate
+IMAGES   := $(SERVICES) migrate web
 REGISTRY ?= nocu
 TAG      ?= latest
 BIN      := bin
@@ -12,7 +12,8 @@ ifneq (,$(wildcard .env))
 endif
 
 .PHONY: help build build-migrate run-% dev dev-% migrate migrate-down migrate-status \
-        test test-race cover lint fmt tidy docker-build up down logs clean
+        test test-race cover lint fmt tidy docker-build up down logs clean \
+        web-install dev-web web-build web-lint web-test web-typecheck
 
 help: ## Show targets
 	@grep -hE '^[a-zA-Z_%-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -51,7 +52,7 @@ migrate-down: ## Roll back the last migration
 migrate-status: ## Show migration state
 	go run ./cmd/migrate status
 
-test: ## Run unit tests
+test: web-test ## Run unit tests (Go + web)
 	go test ./...
 
 test-race: ## Run unit tests with the race detector
@@ -60,7 +61,7 @@ test-race: ## Run unit tests with the race detector
 cover: ## Run tests with coverage report
 	go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -1
 
-lint: ## gofmt check + go vet
+lint: web-lint ## gofmt check + go vet + web lint/typecheck
 	@test -z "$$(gofmt -l .)" || (echo "gofmt needed on:"; gofmt -l .; exit 1)
 	go vet ./...
 
@@ -85,4 +86,24 @@ logs: ## Tail service logs
 	docker compose logs -f core-api identity consumer scheduler
 
 clean: ## Remove build artefacts
-	rm -rf $(BIN) tmp coverage.out
+	rm -rf $(BIN) tmp coverage.out web/.next
+
+# ---- web (Next.js) -------------------------------------------------------
+# pnpm workspace at the repo root; the app lives in web/.
+
+web-install: ## Install web dependencies (pnpm)
+	@command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found: corepack enable && corepack prepare pnpm@latest --activate"; exit 1; }
+	pnpm install --frozen-lockfile
+
+dev-web: ## Run the web app with hot reload on :3000
+	pnpm --filter web dev
+
+web-build: ## Production build of the web app
+	pnpm --filter web build
+
+web-lint: ## ESLint + tsc for the web app
+	pnpm --filter web lint
+	pnpm --filter web typecheck
+
+web-test: ## Vitest unit tests for the web app
+	pnpm --filter web test

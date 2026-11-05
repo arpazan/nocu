@@ -1,0 +1,7 @@
+# pnpm workspace: every JS/TS package in the monorepo. Go code lives in services/ and shared/.
+packages:
+  - web
+
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

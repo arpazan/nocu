@@ -12,3 +12,7 @@ docker-compose.yml
 coverage.*
 tmp/
 .air/
+node_modules/
+web/.next/
+web/out/
+web/.env*
