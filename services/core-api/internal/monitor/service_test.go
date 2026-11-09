@@ -124,6 +124,43 @@ func TestCreateAppliesDefaults(t *testing.T) {
 	}
 }
 
+func TestAutoCreateIncidentToggle(t *testing.T) {
+	svc, repo, _ := newService()
+	ctx := context.Background()
+
+	m, err := svc.Create(ctx, validCreate())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.AutoCreateIncident {
+		t.Fatal("auto_create_incident should default to false")
+	}
+
+	in := validCreate()
+	in.AutoCreateIncident = ptr(true)
+	on, err := svc.Create(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !on.AutoCreateIncident || !repo.items[on.ID].AutoCreateIncident {
+		t.Fatal("auto_create_incident should persist as true")
+	}
+
+	// Flipping the toggle is not a probe change: next_check_at must stay put.
+	later := svc.now().Add(time.Hour)
+	repo.items[m.ID].NextCheckAt = &later
+	updated, err := svc.Update(ctx, m.ID, UpdateInput{AutoCreateIncident: ptr(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !updated.AutoCreateIncident {
+		t.Fatal("update should turn the toggle on")
+	}
+	if updated.NextCheckAt == nil || !updated.NextCheckAt.Equal(later) {
+		t.Fatalf("toggle change must not reschedule the probe: %v", updated.NextCheckAt)
+	}
+}
+
 func TestCreateValidation(t *testing.T) {
 	svc, _, _ := newService()
 	ctx := context.Background()

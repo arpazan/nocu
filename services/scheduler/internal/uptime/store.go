@@ -2,6 +2,7 @@ package uptime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -24,7 +25,13 @@ type Store interface {
 	SaveHeartbeat(ctx context.Context, hb *model.MonitorHeartbeat) error
 	// UpdateMonitor sets probe-state columns on one monitor without touching updated_at.
 	UpdateMonitor(ctx context.Context, id uuid.UUID, fields map[string]any) error
+	// CreateIncidentIfNone inserts inc unless its monitor already has an open or
+	// acknowledged incident. It reports whether a row was inserted.
+	CreateIncidentIfNone(ctx context.Context, inc *model.Incident) (bool, error)
 }
+
+// activeIncidentStatuses are the incident states that block a new auto-created incident.
+var activeIncidentStatuses = []model.IncidentStatus{model.IncidentOpen, model.IncidentAcknowledged}
 
 type gormStore struct{ db *gorm.DB }
 
@@ -109,4 +116,36 @@ func (s *gormStore) UpdateMonitor(ctx context.Context, id uuid.UUID, fields map[
 		return fmt.Errorf("uptime: update monitor %s: %w", id, err)
 	}
 	return nil
+}
+
+func (s *gormStore) CreateIncidentIfNone(ctx context.Context, inc *model.Incident) (bool, error) {
+	if inc.MonitorID == nil {
+		return false, errors.New("uptime: create incident: monitor_id is required")
+	}
+	created := false
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var active int64
+		err := tx.Model(&model.Incident{}).
+			Where("monitor_id = ? AND status IN ?", *inc.MonitorID, activeIncidentStatuses).
+			Count(&active).Error
+		if err != nil {
+			return fmt.Errorf("count active: %w", err)
+		}
+		if active > 0 {
+			return nil
+		}
+		if err := tx.Create(inc).Error; err != nil {
+			// Another replica won the race; the partial unique index rejected ours.
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				return nil
+			}
+			return fmt.Errorf("insert: %w", err)
+		}
+		created = true
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("uptime: create incident for %s: %w", *inc.MonitorID, err)
+	}
+	return created, nil
 }

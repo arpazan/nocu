@@ -50,6 +50,7 @@ type createRequest struct {
 	DomainExpiryNotification *bool `json:"domain_expiry_notification"`
 	MaxRedirects             *int  `json:"max_redirects"`
 	SaveErrorResponse        *bool `json:"save_error_response"`
+	AutoCreateIncident       *bool `json:"auto_create_incident"`
 
 	Method       model.HTTPMethod   `json:"method"`
 	BodyEncoding model.BodyEncoding `json:"body_encoding"`
@@ -76,6 +77,7 @@ type updateRequest struct {
 	DomainExpiryNotification *bool `json:"domain_expiry_notification"`
 	MaxRedirects             *int  `json:"max_redirects"`
 	SaveErrorResponse        *bool `json:"save_error_response"`
+	AutoCreateIncident       *bool `json:"auto_create_incident"`
 
 	Method       *model.HTTPMethod   `json:"method"`
 	BodyEncoding *model.BodyEncoding `json:"body_encoding"`
@@ -114,6 +116,7 @@ func (h *Handler) create(c echo.Context) error {
 		DomainExpiryNotification: req.DomainExpiryNotification,
 		MaxRedirects:             req.MaxRedirects,
 		SaveErrorResponse:        req.SaveErrorResponse,
+		AutoCreateIncident:       req.AutoCreateIncident,
 		Method:                   req.Method,
 		BodyEncoding:             req.BodyEncoding,
 		Body:                     req.Body,
@@ -190,6 +193,7 @@ func (h *Handler) update(c echo.Context) error {
 		DomainExpiryNotification: req.DomainExpiryNotification,
 		MaxRedirects:             req.MaxRedirects,
 		SaveErrorResponse:        req.SaveErrorResponse,
+		AutoCreateIncident:       req.AutoCreateIncident,
 		Method:                   req.Method,
 		BodyEncoding:             req.BodyEncoding,
 		Body:                     req.Body,

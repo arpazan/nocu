@@ -159,6 +159,8 @@ export interface Monitor {
   domain_expiry_notification: boolean;
   max_redirects: number;
   save_error_response: boolean;
+  /** Open a critical incident automatically when the monitor flips to down. */
+  auto_create_incident: boolean;
   method: HttpMethod;
   body_encoding: BodyEncoding;
   body: string;
@@ -213,6 +215,7 @@ export interface CreateMonitorRequest {
   domain_expiry_notification?: boolean;
   max_redirects?: number;
   save_error_response?: boolean;
+  auto_create_incident?: boolean;
   method?: HttpMethod;
   body_encoding?: BodyEncoding;
   body?: string;
@@ -267,6 +270,8 @@ export interface Incident {
   source: string;
   /** omitempty */
   reporter_id?: string | null;
+  /** omitempty; set when the scheduler opened the incident for a monitor. */
+  monitor_id?: string | null;
   /** omitempty */
   acknowledged_at?: string | null;
   /** omitempty */
@@ -297,6 +302,7 @@ export interface UpdateIncidentRequest {
 export type IncidentListFilters = {
   status?: IncidentStatus;
   severity?: Severity;
+  monitor_id?: string;
   limit?: number;
   offset?: number;
 };

@@ -19,6 +19,7 @@ var list = []*gormigrate.Migration{
 	initSchema(),
 	seedRoles(),
 	createMonitors(),
+	monitorAutoIncident(),
 }
 
 func newMigrator(db *gorm.DB) *gormigrate.Gormigrate {

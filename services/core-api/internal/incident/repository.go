@@ -21,10 +21,11 @@ var (
 
 // ListFilter narrows List.
 type ListFilter struct {
-	Status   model.IncidentStatus
-	Severity model.Severity
-	Limit    int
-	Offset   int
+	Status    model.IncidentStatus
+	Severity  model.Severity
+	MonitorID *uuid.UUID
+	Limit     int
+	Offset    int
 }
 
 func (f *ListFilter) normalise() {
@@ -77,6 +78,9 @@ func (r *gormRepository) List(ctx context.Context, f ListFilter) ([]model.Incide
 	}
 	if f.Severity != "" {
 		q = q.Where("severity = ?", f.Severity)
+	}
+	if f.MonitorID != nil {
+		q = q.Where("monitor_id = ?", *f.MonitorID)
 	}
 
 	var total int64

@@ -199,6 +199,16 @@ function LoadedIncident({ incident }: { incident: Incident }) {
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 text-sm">
             <dt className="text-muted-foreground">Source</dt>
             <dd className="font-mono text-xs leading-5">{incident.source || "—"}</dd>
+            {incident.monitor_id ? (
+              <>
+                <dt className="text-muted-foreground">Monitor</dt>
+                <dd className="truncate font-mono text-xs leading-5">
+                  <Link href={`/monitors/${encodeURIComponent(incident.monitor_id)}`} className="underline-offset-4 hover:underline">
+                    {incident.monitor_id}
+                  </Link>
+                </dd>
+              </>
+            ) : null}
             <dt className="text-muted-foreground">Reporter</dt>
             <dd className="truncate font-mono text-xs leading-5" title={incident.reporter_id ?? undefined}>
               {incident.reporter_id || "—"}

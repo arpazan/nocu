@@ -28,6 +28,7 @@ function monitor(overrides: Partial<Monitor> & { id: string; name: string }): Mo
     domain_expiry_notification: false,
     max_redirects: 10,
     save_error_response: false,
+    auto_create_incident: false,
     method: "GET",
     body_encoding: "json",
     body: "",

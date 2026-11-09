@@ -135,6 +135,8 @@ type Monitor struct {
 	DomainExpiryNotification bool `gorm:"not null;default:false" json:"domain_expiry_notification"`
 	MaxRedirects             int  `gorm:"not null;default:10" json:"max_redirects"`
 	SaveErrorResponse        bool `gorm:"not null;default:false" json:"save_error_response"`
+	// AutoCreateIncident opens a critical incident when the monitor flips to down.
+	AutoCreateIncident bool `gorm:"not null;default:false" json:"auto_create_incident"`
 
 	// HTTP options
 	Method       HTTPMethod     `gorm:"size:8;not null;default:GET" json:"method"`

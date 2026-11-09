@@ -646,8 +646,13 @@ export function MonitorForm({ monitor }: { monitor?: Monitor }) {
           </FieldGroup>
         </Section>
 
-        <Section title="Advanced" help="Extra warnings and what to keep from failed checks.">
+        <Section title="Advanced" help="Incident automation, extra warnings and what to keep from failed checks.">
           <FieldGroup>
+            <SwitchField
+              control={control}
+              name="auto_create_incident"
+              label="Open a critical incident when this monitor goes down"
+            />
             <SwitchField
               control={control}
               name="cert_expiry_notification"

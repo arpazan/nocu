@@ -111,6 +111,7 @@ function Facts({ monitor }: { monitor: Monitor }) {
       <Fact label="Method">{monitor.method}</Fact>
       <Fact label="Auth">{authMethodLabel[monitor.auth_method]}</Fact>
       <Fact label="Notifications">{notificationSummary(monitor)}</Fact>
+      <Fact label="Auto incident">{monitor.auto_create_incident ? "On (critical when down)" : "Off"}</Fact>
     </dl>
   );
 }
