@@ -2,43 +2,7 @@
 
 Monorepo for a NOC platform: an incident and uptime-monitor API with realtime WebSocket push, an identity service, an event consumer and a cron scheduler that probes monitors, plus a Next.js web app. Go services use PostgreSQL via GORM and NATS JetStream for messaging.
 
-## Screenshots
-
-Captured from the web app at `localhost:3000` against the local stack (`docker compose up -d postgres nats`, `make dev`, `make dev-web`) with the seeded demo monitors and incidents. Source images live in `docs/screenshots/`.
-
-### Overview
-
-The landing page summarises what needs attention: monitors that are down and incidents that are open, a live event feed fed by the core-api WebSocket, and `/healthz` checks for the backend services.
-
-![Overview page with needs-attention list, live events and backend health](docs/screenshots/overview.png)
-
-### Monitors
-
-Every monitor with its status, a sparkline of recent heartbeats, interval and last check time. Filters narrow by check type and status.
-
-![Monitors list](docs/screenshots/monitors.png)
-
-A monitor page shows its configuration, the last 60 checks and the full heartbeat history with HTTP status, latency and error message. Checks can be paused, and the monitor edited or deleted from here.
-
-![Monitor detail for a failing monitor](docs/screenshots/monitor-detail.png)
-
-The new-monitor form needs only a name and a URL; interval, timeout, retries, expiry warnings, request method and body, authentication and notification channels have defaults.
-
-![New monitor form](docs/screenshots/monitor-new.png)
-
-### Incidents
-
-Incidents newest first, with severity, status, source and age. Filters narrow by status and severity.
-
-![Incidents list](docs/screenshots/incidents.png)
-
-An incident page shows its lifecycle timeline (opened, acknowledged, resolved, closed) and lets an operator resolve, close, edit or delete it.
-
-![Incident detail with timeline](docs/screenshots/incident-detail.png)
-
-### Sign in
-
-![Sign in page](docs/screenshots/login.png)
+![Nocu web app](docs/screenshots/Artboard.png)
 
 ## Layout
 
