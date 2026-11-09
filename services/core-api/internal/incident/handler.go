@@ -63,6 +63,13 @@ func (h *Handler) list(c echo.Context) error {
 		Status:   model.IncidentStatus(c.QueryParam("status")),
 		Severity: model.Severity(c.QueryParam("severity")),
 	}
+	if v := c.QueryParam("monitor_id"); v != "" {
+		monitorID, err := uuid.Parse(v)
+		if err != nil {
+			return httpx.BadRequest("monitor_id must be a UUID")
+		}
+		f.MonitorID = &monitorID
+	}
 	f.Limit, _ = strconv.Atoi(c.QueryParam("limit"))
 	f.Offset, _ = strconv.Atoi(c.QueryParam("offset"))
 	f.normalise()

@@ -125,6 +125,8 @@ curl -s localhost:8080/api/v1/monitors -H "authorization: Bearer $TOKEN" \
 
 Within the first interval the WebSocket client from the previous section receives a `monitor.up` (or `monitor.down`) frame; later frames arrive only when the status flips. `GET /api/v1/monitors/{id}/heartbeats` returns the probe history. `POST .../pause` and `.../resume` stop and restart probing.
 
+With `"auto_create_incident": true` the scheduler also opens a `critical` incident (source `monitor`, linked by `monitor_id`) the moment the monitor flips to `down`, and publishes `incident.created`. A monitor never has more than one open or acknowledged incident at a time; recovery does not close it, an operator does. `GET /api/v1/incidents?monitor_id={id}` lists a monitor's incidents.
+
 Notification channels are attached per monitor:
 
 | Type      | Delivered | Notes |

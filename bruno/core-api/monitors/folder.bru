@@ -26,6 +26,7 @@ docs {
     "domain_expiry_notification": false,
     "max_redirects": 10,
     "save_error_response": false,
+    "auto_create_incident": false,
     "method": "GET",
     "body_encoding": "json",
     "body": "",
@@ -62,6 +63,7 @@ docs {
   |                | domain_expiry_notification   | publish `monitor.domain_expiring` as the domain nears expiry |
   |                | max_redirects                | default 10, `0` disables following redirects               |
   |                | save_error_response          | keep the response body of failed probes on the heartbeat   |
+  |                | auto_create_incident         | default `false`; open a `critical` incident (source `monitor`, `monitor_id` set) when the monitor flips to `down`; at most one open/acknowledged incident per monitor |
   | HTTP options   | method                       | default `GET`; `GET` `POST` `PUT` `PATCH` `DELETE` `HEAD` `OPTIONS` |
   |                | body_encoding                | `json` (default) \| `form` \| `xml`                        |
   |                | body                         | raw request body                                           |

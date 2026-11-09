@@ -128,6 +128,55 @@ func (w *Worker) Check(ctx context.Context, m *model.Monitor) {
 	if w.dispatch != nil {
 		w.dispatch.Dispatch(ctx, m.Notifications, ev)
 	}
+	if hb.Status == model.MonitorDown && m.AutoCreateIncident {
+		w.openIncident(ctx, m, ev)
+	}
+}
+
+// incidentSource is the Incident.Source value of auto-created incidents.
+const incidentSource = "monitor"
+
+// buildIncident shapes the critical incident opened when m flips to down.
+func buildIncident(m *model.Monitor, ev Event) *model.Incident {
+	id := m.ID
+	desc := fmt.Sprintf("Monitor %s (%s) went down at %s.\n\nProbe result: %s",
+		m.Name, m.URL, ev.CheckedAt.UTC().Format(time.RFC3339), ev.Message)
+	if ev.HTTPStatus > 0 {
+		desc += fmt.Sprintf(" (HTTP %d)", ev.HTTPStatus)
+	}
+	return &model.Incident{
+		Title:       ev.Title(),
+		Description: desc,
+		Severity:    model.SeverityCritical,
+		Status:      model.IncidentOpen,
+		Source:      incidentSource,
+		MonitorID:   &id,
+	}
+}
+
+// openIncident creates a critical incident for a monitor that just went down,
+// unless one is already active, and publishes incident.created. Like publish
+// and Dispatch it is best-effort: a failure is logged, never returned, so a
+// database hiccup cannot stall probing.
+func (w *Worker) openIncident(ctx context.Context, m *model.Monitor, ev Event) {
+	log := w.log.With("monitor_id", m.ID, "monitor", m.Name)
+	inc := buildIncident(m, ev)
+	created, err := w.store.CreateIncidentIfNone(ctx, inc)
+	if err != nil {
+		log.ErrorContext(ctx, "auto-create incident failed", "err", err)
+		return
+	}
+	if !created {
+		log.Info("auto-create incident skipped: one is already active")
+		return
+	}
+	log.Info("incident auto-created", "incident_id", inc.ID, "severity", inc.Severity)
+	if w.pub == nil {
+		return
+	}
+	if err := messaging.PublishJSON(ctx, w.pub, messaging.SubjectIncidentCreated, source, inc); err != nil {
+		w.log.ErrorContext(ctx, "publish failed", "subject", messaging.SubjectIncidentCreated, "incident_id", inc.ID, "err", err)
+	}
 }
 
 // transition applies the retry state machine to a probe result. It mutates m's

@@ -66,13 +66,15 @@ func (s IncidentStatus) CanTransitionTo(next IncidentStatus) bool {
 // Incident is an operational issue tracked by the NOC.
 type Incident struct {
 	Base
-	Title          string         `gorm:"size:255;not null" json:"title"`
-	Description    string         `gorm:"type:text" json:"description"`
-	Severity       Severity       `gorm:"size:16;not null;index" json:"severity"`
-	Status         IncidentStatus `gorm:"size:16;not null;index;default:open" json:"status"`
-	Source         string         `gorm:"size:128;index" json:"source"`
-	ReporterID     *uuid.UUID     `gorm:"type:uuid;index" json:"reporter_id,omitempty"`
-	AcknowledgedAt *time.Time     `json:"acknowledged_at,omitempty"`
-	ResolvedAt     *time.Time     `json:"resolved_at,omitempty"`
-	ClosedAt       *time.Time     `json:"closed_at,omitempty"`
+	Title       string         `gorm:"size:255;not null" json:"title"`
+	Description string         `gorm:"type:text" json:"description"`
+	Severity    Severity       `gorm:"size:16;not null;index" json:"severity"`
+	Status      IncidentStatus `gorm:"size:16;not null;index;default:open" json:"status"`
+	Source      string         `gorm:"size:128;index" json:"source"`
+	ReporterID  *uuid.UUID     `gorm:"type:uuid;index" json:"reporter_id,omitempty"`
+	// MonitorID links an incident opened automatically by the scheduler to its monitor.
+	MonitorID      *uuid.UUID `gorm:"type:uuid;index" json:"monitor_id,omitempty"`
+	AcknowledgedAt *time.Time `json:"acknowledged_at,omitempty"`
+	ResolvedAt     *time.Time `json:"resolved_at,omitempty"`
+	ClosedAt       *time.Time `json:"closed_at,omitempty"`
 }

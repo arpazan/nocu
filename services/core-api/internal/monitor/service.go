@@ -52,6 +52,7 @@ type CreateInput struct {
 	DomainExpiryNotification *bool
 	MaxRedirects             *int
 	SaveErrorResponse        *bool
+	AutoCreateIncident       *bool
 
 	Method       model.HTTPMethod
 	BodyEncoding model.BodyEncoding
@@ -83,6 +84,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*model.Monitor, e
 		DomainExpiryNotification: valueOr(in.DomainExpiryNotification, false),
 		MaxRedirects:             valueOr(in.MaxRedirects, model.MonitorDefaultMaxRedirects),
 		SaveErrorResponse:        valueOr(in.SaveErrorResponse, false),
+		AutoCreateIncident:       valueOr(in.AutoCreateIncident, false),
 
 		Method:       in.Method,
 		BodyEncoding: in.BodyEncoding,
@@ -162,6 +164,7 @@ type UpdateInput struct {
 	DomainExpiryNotification *bool
 	MaxRedirects             *int
 	SaveErrorResponse        *bool
+	AutoCreateIncident       *bool
 
 	Method       *model.HTTPMethod
 	BodyEncoding *model.BodyEncoding
@@ -194,6 +197,7 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*mo
 	setIf(&m.DomainExpiryNotification, in.DomainExpiryNotification)
 	setIf(&m.MaxRedirects, in.MaxRedirects)
 	setIf(&m.SaveErrorResponse, in.SaveErrorResponse)
+	setIf(&m.AutoCreateIncident, in.AutoCreateIncident)
 	setIf(&m.Method, in.Method)
 	setIf(&m.BodyEncoding, in.BodyEncoding)
 	setIf(&m.Body, in.Body)

@@ -15,6 +15,7 @@ docs {
     "status": "open",
     "source": "snmp",
     "reporter_id": "uuid",
+    "monitor_id": "uuid",
     "acknowledged_at": null,
     "resolved_at": null,
     "closed_at": null,
@@ -24,6 +25,9 @@ docs {
   ```
 
   `severity`: `critical` | `high` | `medium` | `low`
+
+  `monitor_id` is set only on incidents the scheduler opened automatically for a monitor with
+  `auto_create_incident` on (source `monitor`, severity `critical`). Filter with `?monitor_id=`.
 
   `status` transitions: `open` -> `acknowledged` -> `resolved` -> `closed`.
   Any non-closed status may jump straight to `closed`. `resolved` may reopen to `open`.

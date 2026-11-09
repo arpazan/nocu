@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -22,6 +23,7 @@ type fakeStore struct {
 	monitors   []model.Monitor
 	heartbeats []model.MonitorHeartbeat
 	updates    map[uuid.UUID][]map[string]any
+	incidents  []model.Incident
 }
 
 func newFakeStore(ms ...model.Monitor) *fakeStore {
@@ -88,6 +90,20 @@ func (f *fakeStore) UpdateMonitor(_ context.Context, id uuid.UUID, fields map[st
 		}
 	}
 	return nil
+}
+
+func (f *fakeStore) CreateIncidentIfNone(_ context.Context, inc *model.Incident) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, existing := range f.incidents {
+		if existing.MonitorID != nil && *existing.MonitorID == *inc.MonitorID &&
+			(existing.Status == model.IncidentOpen || existing.Status == model.IncidentAcknowledged) {
+			return false, nil
+		}
+	}
+	inc.ID = uuid.New()
+	f.incidents = append(f.incidents, *inc)
+	return true, nil
 }
 
 func TestTransitionRetriesThenDown(t *testing.T) {
@@ -243,5 +259,107 @@ func TestDispatcherHandlesUnsupportedAndInvalid(t *testing.T) {
 	disp.Dispatch(context.Background(), notes, Event{Name: "x", Kind: KindStatus, Status: model.MonitorUp})
 	if _, warned := disp.warned.Load(notes[0].ID); !warned {
 		t.Fatal("unsupported channel should be recorded as warned")
+	}
+}
+
+// flapServer fails while fail is set and returns 200 otherwise.
+func flapServer(t *testing.T) (*httptest.Server, *atomic.Bool) {
+	t.Helper()
+	var fail atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if fail.Load() {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &fail
+}
+
+func TestWorkerAutoCreatesIncidentOnDown(t *testing.T) {
+	srv, fail := flapServer(t)
+	m := *baseMonitor(srv.URL)
+	m.ID = uuid.New()
+	m.Active = true
+	m.AutoCreateIncident = true
+	store := newFakeStore(m)
+	broker := messaging.NewMemory()
+	w := NewWorker(store, localProber(), broker, nil, slog.Default(), WorkerOptions{Tick: time.Hour, Concurrency: 1})
+	ctx := context.Background()
+
+	w.RunOnce(ctx) // pending -> up
+	if len(store.incidents) != 0 {
+		t.Fatalf("up should not open an incident: %+v", store.incidents)
+	}
+
+	fail.Store(true)
+	store.monitors[0].NextCheckAt = nil
+	w.RunOnce(ctx) // up -> down (retries 0)
+	if len(store.incidents) != 1 {
+		t.Fatalf("down should open exactly one incident, got %d", len(store.incidents))
+	}
+	inc := store.incidents[0]
+	if inc.Severity != model.SeverityCritical || inc.Status != model.IncidentOpen || inc.Source != incidentSource {
+		t.Fatalf("incident shape: %+v", inc)
+	}
+	if inc.MonitorID == nil || *inc.MonitorID != m.ID || inc.Title != "t is DOWN" {
+		t.Fatalf("incident link/title: %+v", inc)
+	}
+	if !strings.Contains(inc.Description, srv.URL) || !strings.Contains(inc.Description, "HTTP 502") {
+		t.Fatalf("description should carry url and http status: %q", inc.Description)
+	}
+
+	store.monitors[0].NextCheckAt = nil
+	w.RunOnce(ctx) // still down: not important, nothing new
+	if len(store.incidents) != 1 {
+		t.Fatalf("repeat down must not open another incident, got %d", len(store.incidents))
+	}
+
+	fail.Store(false)
+	store.monitors[0].NextCheckAt = nil
+	w.RunOnce(ctx) // down -> up
+	fail.Store(true)
+	store.monitors[0].NextCheckAt = nil
+	w.RunOnce(ctx) // up -> down again while the first incident is still open
+	if len(store.incidents) != 1 {
+		t.Fatalf("an active incident must block a second one, got %d", len(store.incidents))
+	}
+
+	want := []string{
+		messaging.SubjectMonitorUp, messaging.SubjectMonitorDown, messaging.SubjectIncidentCreated,
+		messaging.SubjectMonitorUp, messaging.SubjectMonitorDown,
+	}
+	got := broker.Subjects()
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("published %v want %v", got, want)
+	}
+	var env messaging.Envelope
+	if err := json.Unmarshal(broker.Published[2].Data, &env); err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	_ = json.Unmarshal(env.Data, &data)
+	if data["severity"] != "critical" || data["monitor_id"] != m.ID.String() || data["id"] != inc.ID.String() {
+		t.Fatalf("incident.created payload: %v", data)
+	}
+}
+
+func TestWorkerSkipsIncidentWhenToggleOff(t *testing.T) {
+	srv, fail := flapServer(t)
+	fail.Store(true)
+	m := *baseMonitor(srv.URL)
+	m.ID = uuid.New()
+	m.Active = true
+	store := newFakeStore(m)
+	broker := messaging.NewMemory()
+	w := NewWorker(store, localProber(), broker, nil, slog.Default(), WorkerOptions{Tick: time.Hour, Concurrency: 1})
+
+	w.RunOnce(context.Background()) // pending -> down
+	if len(store.incidents) != 0 {
+		t.Fatalf("toggle off must not open an incident: %+v", store.incidents)
+	}
+	if got := broker.Subjects(); len(got) != 1 || got[0] != messaging.SubjectMonitorDown {
+		t.Fatalf("published %v", got)
 	}
 }
