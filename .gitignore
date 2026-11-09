@@ -28,3 +28,11 @@ node_modules/
 /web/out/
 *.tsbuildinfo
 .pnpm-store/
+
+# AI assistant config & docs
+.claude/
+**/.impeccable/
+CLAUDE.md
+AGENTS.md
+DESIGN.md
+PRODUCT.md
