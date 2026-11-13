@@ -95,7 +95,7 @@ type updateRequest struct {
 func toNotificationInputs(in []notificationRequest) []NotificationInput {
 	out := make([]NotificationInput, 0, len(in))
 	for _, n := range in {
-		out = append(out, NotificationInput{Type: n.Type, Enabled: n.Enabled, Config: n.Config})
+		out = append(out, NotificationInput(n))
 	}
 	return out
 }

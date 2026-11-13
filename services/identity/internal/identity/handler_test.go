@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -14,11 +13,12 @@ import (
 	"github.com/Pzquzer/Nocu/shared/auth"
 	"github.com/Pzquzer/Nocu/shared/httpx"
 	"github.com/Pzquzer/Nocu/shared/model"
+	"github.com/Pzquzer/Nocu/shared/testutil"
 )
 
 type handlerFixture struct {
 	e      *echo.Echo
-	repo   *fakeRepo
+	repo   *fakeRepo // reached into only to deactivate a user, which has no endpoint
 	tokens *auth.Manager
 }
 
@@ -33,68 +33,25 @@ func newHandlerFixture(t *testing.T) *handlerFixture {
 }
 
 func (f *handlerFixture) do(method, path, token, body string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	if token != "" {
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
-	}
-	rec := httptest.NewRecorder()
-	f.e.ServeHTTP(rec, req)
-	return rec
+	return testutil.Do(f.e, method, path, token, body)
 }
 
-type envelope struct {
-	Data  json.RawMessage `json:"data"`
-	Error *httpx.Error    `json:"error"`
-}
-
-func decode(t *testing.T, rec *httptest.ResponseRecorder) envelope {
-	t.Helper()
-	var env envelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("decode body %q: %v", rec.Body.String(), err)
-	}
-	return env
-}
-
-func decodeUser(t *testing.T, rec *httptest.ResponseRecorder) UserResponse {
-	t.Helper()
-	var u UserResponse
-	if err := json.Unmarshal(decode(t, rec).Data, &u); err != nil {
-		t.Fatalf("decode user: %v", err)
-	}
-	return u
-}
-
-func decodePair(t *testing.T, rec *httptest.ResponseRecorder) auth.TokenPair {
-	t.Helper()
-	var p auth.TokenPair
-	if err := json.Unmarshal(decode(t, rec).Data, &p); err != nil {
-		t.Fatalf("decode token pair: %v", err)
-	}
-	return p
-}
-
-const registerBody = `{"email":" Alice@Example.com ","password":"correct horse","name":"Alice"}`
+const (
+	registerBody = `{"email":" Alice@Example.com ","password":"correct horse","name":"Alice"}`
+	loginBody    = `{"email":"alice@example.com","password":"correct horse"}`
+)
 
 func (f *handlerFixture) registerAlice(t *testing.T) UserResponse {
 	t.Helper()
 	rec := f.do(http.MethodPost, "/api/auth/register", "", registerBody)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("register: got %d body %s", rec.Code, rec.Body.String())
-	}
-	return decodeUser(t, rec)
+	return testutil.DecodeData[UserResponse](t, rec, http.StatusCreated)
 }
 
-func assertError(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int, wantMessage string) {
+func (f *handlerFixture) loginAlice(t *testing.T) auth.TokenPair {
 	t.Helper()
-	if rec.Code != wantStatus {
-		t.Fatalf("got %d; want %d (body %s)", rec.Code, wantStatus, rec.Body.String())
-	}
-	env := decode(t, rec)
-	if env.Error == nil || env.Error.Message != wantMessage {
-		t.Errorf("error = %+v; want message %q", env.Error, wantMessage)
-	}
+	f.registerAlice(t)
+	rec := f.do(http.MethodPost, "/api/auth/login", "", loginBody)
+	return testutil.DecodeData[auth.TokenPair](t, rec, http.StatusOK)
 }
 
 func TestHandlerRegister(t *testing.T) {
@@ -114,10 +71,15 @@ func TestHandlerRegister(t *testing.T) {
 		if u.CreatedAt.IsZero() {
 			t.Error("created_at should be set")
 		}
+	})
 
-		// The raw body must never carry the password hash.
-		rec := f.do(http.MethodPost, "/api/auth/register", "", `{"email":"b@example.com","password":"correct horse","name":"B"}`)
-		if strings.Contains(rec.Body.String(), "password") {
+	t.Run("response never carries password material", func(t *testing.T) {
+		f := newHandlerFixture(t)
+		rec := f.do(http.MethodPost, "/api/auth/register", "", registerBody)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
+		}
+		if strings.Contains(strings.ToLower(rec.Body.String()), "password") {
 			t.Errorf("response leaks password material: %s", rec.Body.String())
 		}
 	})
@@ -135,14 +97,14 @@ func TestHandlerRegister(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
-			assertError(t, f.do(http.MethodPost, "/api/auth/register", "", tt.body), tt.wantStatus, tt.wantMessage)
+			testutil.AssertError(t, f.do(http.MethodPost, "/api/auth/register", "", tt.body), tt.wantStatus, tt.wantMessage)
 		})
 	}
 
 	t.Run("duplicate email is a conflict", func(t *testing.T) {
 		f := newHandlerFixture(t)
 		f.registerAlice(t)
-		assertError(t, f.do(http.MethodPost, "/api/auth/register", "", registerBody), http.StatusConflict, "email already registered")
+		testutil.AssertError(t, f.do(http.MethodPost, "/api/auth/register", "", registerBody), http.StatusConflict, "email already registered")
 	})
 }
 
@@ -150,12 +112,8 @@ func TestHandlerLogin(t *testing.T) {
 	t.Run("success returns a usable token pair", func(t *testing.T) {
 		f := newHandlerFixture(t)
 		u := f.registerAlice(t)
+		pair := testutil.DecodeData[auth.TokenPair](t, f.do(http.MethodPost, "/api/auth/login", "", loginBody), http.StatusOK)
 
-		rec := f.do(http.MethodPost, "/api/auth/login", "", `{"email":"alice@example.com","password":"correct horse"}`)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
-		}
-		pair := decodePair(t, rec)
 		claims, err := f.tokens.Parse(pair.AccessToken, auth.TokenAccess)
 		if err != nil {
 			t.Fatalf("access token invalid: %v", err)
@@ -182,7 +140,7 @@ func TestHandlerLogin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
 			f.registerAlice(t)
-			assertError(t, f.do(http.MethodPost, "/api/auth/login", "", tt.body), tt.wantStatus, tt.wantMessage)
+			testutil.AssertError(t, f.do(http.MethodPost, "/api/auth/login", "", tt.body), tt.wantStatus, tt.wantMessage)
 		})
 	}
 
@@ -190,30 +148,16 @@ func TestHandlerLogin(t *testing.T) {
 		f := newHandlerFixture(t)
 		f.registerAlice(t)
 		f.repo.users["alice@example.com"].IsActive = false
-		assertError(t, f.do(http.MethodPost, "/api/auth/login", "", `{"email":"alice@example.com","password":"correct horse"}`),
-			http.StatusForbidden, "account is inactive")
+		testutil.AssertError(t, f.do(http.MethodPost, "/api/auth/login", "", loginBody), http.StatusForbidden, "account is inactive")
 	})
 }
 
 func TestHandlerRefresh(t *testing.T) {
-	login := func(t *testing.T, f *handlerFixture) auth.TokenPair {
-		t.Helper()
-		f.registerAlice(t)
-		rec := f.do(http.MethodPost, "/api/auth/login", "", `{"email":"alice@example.com","password":"correct horse"}`)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("login: got %d body %s", rec.Code, rec.Body.String())
-		}
-		return decodePair(t, rec)
-	}
-
 	t.Run("success issues a new pair", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		pair := login(t, f)
+		pair := f.loginAlice(t)
 		rec := f.do(http.MethodPost, "/api/auth/refresh", "", `{"refresh_token":"`+pair.RefreshToken+`"}`)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
-		}
-		next := decodePair(t, rec)
+		next := testutil.DecodeData[auth.TokenPair](t, rec, http.StatusOK)
 		if _, err := f.tokens.Parse(next.AccessToken, auth.TokenAccess); err != nil {
 			t.Errorf("new access token invalid: %v", err)
 		}
@@ -221,9 +165,9 @@ func TestHandlerRefresh(t *testing.T) {
 
 	t.Run("access token is not accepted as refresh token", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		pair := login(t, f)
-		assertError(t, f.do(http.MethodPost, "/api/auth/refresh", "", `{"refresh_token":"`+pair.AccessToken+`"}`),
-			http.StatusUnauthorized, "invalid credentials")
+		pair := f.loginAlice(t)
+		rec := f.do(http.MethodPost, "/api/auth/refresh", "", `{"refresh_token":"`+pair.AccessToken+`"}`)
+		testutil.AssertError(t, rec, http.StatusUnauthorized, "invalid credentials")
 	})
 
 	tests := []struct {
@@ -239,7 +183,7 @@ func TestHandlerRefresh(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
-			assertError(t, f.do(http.MethodPost, "/api/auth/refresh", "", tt.body), tt.wantStatus, tt.wantMessage)
+			testutil.AssertError(t, f.do(http.MethodPost, "/api/auth/refresh", "", tt.body), tt.wantStatus, tt.wantMessage)
 		})
 	}
 }
@@ -248,31 +192,22 @@ func TestHandlerMe(t *testing.T) {
 	t.Run("returns the authenticated user", func(t *testing.T) {
 		f := newHandlerFixture(t)
 		u := f.registerAlice(t)
-		pair, err := f.tokens.Issue(u.ID, u.Email, u.Roles)
-		if err != nil {
-			t.Fatal(err)
-		}
-		rec := f.do(http.MethodGet, "/api/me", pair.AccessToken, "")
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
-		}
-		if got := decodeUser(t, rec); got.ID != u.ID || got.Email != u.Email {
+		token := testutil.IssueToken(t, f.tokens, u.ID, u.Roles...)
+		got := testutil.DecodeData[UserResponse](t, f.do(http.MethodGet, "/api/me", token, ""), http.StatusOK)
+		if got.ID != u.ID || got.Email != u.Email {
 			t.Errorf("got %+v; want %+v", got, u)
 		}
 	})
 
 	t.Run("missing token", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		assertError(t, f.do(http.MethodGet, "/api/me", "", ""), http.StatusUnauthorized, "missing credentials")
+		testutil.AssertError(t, f.do(http.MethodGet, "/api/me", "", ""), http.StatusUnauthorized, "missing credentials")
 	})
 
 	t.Run("valid token for deleted user", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		pair, err := f.tokens.Issue(uuid.New(), "ghost@example.com", []string{model.RoleViewer})
-		if err != nil {
-			t.Fatal(err)
-		}
-		assertError(t, f.do(http.MethodGet, "/api/me", pair.AccessToken, ""), http.StatusNotFound, "user not found")
+		token := testutil.IssueToken(t, f.tokens, uuid.New(), model.RoleViewer)
+		testutil.AssertError(t, f.do(http.MethodGet, "/api/me", token, ""), http.StatusNotFound, "user not found")
 	})
 }
 

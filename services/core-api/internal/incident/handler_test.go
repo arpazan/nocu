@@ -1,140 +1,90 @@
 package incident
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/Pzquzer/Nocu/shared/auth"
-	"github.com/Pzquzer/Nocu/shared/config"
 	"github.com/Pzquzer/Nocu/shared/httpx"
 	"github.com/Pzquzer/Nocu/shared/model"
+	"github.com/Pzquzer/Nocu/shared/testutil"
 )
 
+// handlerFixture wires the handler behind real JWT auth. Each test (or
+// mutating subtest) builds its own so state never leaks between cases.
 type handlerFixture struct {
-	e        *echo.Echo
-	svc      *Service
-	tokens   *auth.Manager
-	viewer   string
-	operator string
-	admin    string
-	adminID  uuid.UUID
+	e       *echo.Echo
+	roles   map[string]string // role name -> access token
+	adminID uuid.UUID
 }
 
 func newHandlerFixture(t *testing.T) *handlerFixture {
 	t.Helper()
 	svc, _ := newService()
-	tokens := auth.NewManager(config.JWT{Secret: "unit-test-secret-value", Issuer: "t", AccessTTL: time.Minute, RefreshTTL: time.Hour})
+	tokens := testutil.NewTokenManager()
 
 	e := echo.New()
 	e.HTTPErrorHandler = httpx.ErrorHandler(slog.Default())
-	g := e.Group("/api", httpx.JWTAuth(tokens))
-	NewHandler(svc).Register(g)
+	NewHandler(svc).Register(e.Group("/api", httpx.JWTAuth(tokens)))
 
-	issue := func(id uuid.UUID, role string) string {
-		pair, err := tokens.Issue(id, role+"@example.com", []string{role})
-		if err != nil {
-			t.Fatalf("issue %s token: %v", role, err)
-		}
-		return pair.AccessToken
-	}
 	adminID := uuid.New()
 	return &handlerFixture{
-		e:        e,
-		svc:      svc,
-		tokens:   tokens,
-		viewer:   issue(uuid.New(), model.RoleViewer),
-		operator: issue(uuid.New(), model.RoleOperator),
-		admin:    issue(adminID, model.RoleAdmin),
-		adminID:  adminID,
+		e: e,
+		roles: map[string]string{
+			model.RoleViewer:   testutil.IssueToken(t, tokens, uuid.New(), model.RoleViewer),
+			model.RoleOperator: testutil.IssueToken(t, tokens, uuid.New(), model.RoleOperator),
+			model.RoleAdmin:    testutil.IssueToken(t, tokens, adminID, model.RoleAdmin),
+		},
+		adminID: adminID,
 	}
 }
 
-func (f *handlerFixture) do(method, path, token, body string) *httptest.ResponseRecorder {
-	var rd *strings.Reader
-	if body != "" {
-		rd = strings.NewReader(body)
-	} else {
-		rd = strings.NewReader("")
-	}
-	req := httptest.NewRequest(method, path, rd)
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	if token != "" {
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
-	}
-	rec := httptest.NewRecorder()
-	f.e.ServeHTTP(rec, req)
-	return rec
-}
+// token returns the access token for role, or "" for an anonymous request.
+func (f *handlerFixture) token(role string) string { return f.roles[role] }
 
-type envelope struct {
-	Data  json.RawMessage `json:"data"`
-	Meta  *httpx.Meta     `json:"meta"`
-	Error *httpx.Error    `json:"error"`
-}
-
-func decode(t *testing.T, rec *httptest.ResponseRecorder) envelope {
-	t.Helper()
-	var env envelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("decode body %q: %v", rec.Body.String(), err)
-	}
-	return env
-}
-
-func decodeIncident(t *testing.T, rec *httptest.ResponseRecorder) model.Incident {
-	t.Helper()
-	var inc model.Incident
-	if err := json.Unmarshal(decode(t, rec).Data, &inc); err != nil {
-		t.Fatalf("decode incident: %v", err)
-	}
-	return inc
+func (f *handlerFixture) do(method, path, role, body string) *httptest.ResponseRecorder {
+	return testutil.Do(f.e, method, path, f.token(role), body)
 }
 
 func (f *handlerFixture) seed(t *testing.T, title string) model.Incident {
 	t.Helper()
-	rec := f.do(http.MethodPost, "/api/incidents", f.admin, `{"title":"`+title+`","severity":"high"}`)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("seed: got %d body %s", rec.Code, rec.Body.String())
-	}
-	return decodeIncident(t, rec)
+	rec := f.do(http.MethodPost, "/api/incidents", model.RoleAdmin, `{"title":"`+title+`","severity":"high"}`)
+	return testutil.DecodeData[model.Incident](t, rec, http.StatusCreated)
 }
 
 func TestHandlerAuthorization(t *testing.T) {
-	f := newHandlerFixture(t)
-	existing := f.seed(t, "seed")
-	id := existing.ID.String()
-
+	// {id} is replaced with a freshly seeded incident for every row, so rows
+	// are independent and can run in any order or subset.
 	tests := []struct {
 		name   string
 		method string
 		path   string
-		token  string
+		role   string
 		body   string
 		want   int
 	}{
 		{"anonymous list", http.MethodGet, "/api/incidents", "", "", http.StatusUnauthorized},
-		{"viewer list", http.MethodGet, "/api/incidents", f.viewer, "", http.StatusOK},
-		{"viewer get", http.MethodGet, "/api/incidents/" + id, f.viewer, "", http.StatusOK},
-		{"viewer create", http.MethodPost, "/api/incidents", f.viewer, `{"title":"x","severity":"low"}`, http.StatusForbidden},
-		{"operator create", http.MethodPost, "/api/incidents", f.operator, `{"title":"x","severity":"low"}`, http.StatusCreated},
-		{"viewer update", http.MethodPatch, "/api/incidents/" + id, f.viewer, `{"title":"y"}`, http.StatusForbidden},
-		{"operator update", http.MethodPatch, "/api/incidents/" + id, f.operator, `{"title":"y"}`, http.StatusOK},
-		{"viewer delete", http.MethodDelete, "/api/incidents/" + id, f.viewer, "", http.StatusForbidden},
-		{"operator delete", http.MethodDelete, "/api/incidents/" + id, f.operator, "", http.StatusForbidden},
-		{"admin delete", http.MethodDelete, "/api/incidents/" + id, f.admin, "", http.StatusNoContent},
+		{"viewer list", http.MethodGet, "/api/incidents", model.RoleViewer, "", http.StatusOK},
+		{"viewer get", http.MethodGet, "/api/incidents/{id}", model.RoleViewer, "", http.StatusOK},
+		{"viewer create", http.MethodPost, "/api/incidents", model.RoleViewer, `{"title":"x","severity":"low"}`, http.StatusForbidden},
+		{"operator create", http.MethodPost, "/api/incidents", model.RoleOperator, `{"title":"x","severity":"low"}`, http.StatusCreated},
+		{"viewer update", http.MethodPatch, "/api/incidents/{id}", model.RoleViewer, `{"title":"y"}`, http.StatusForbidden},
+		{"operator update", http.MethodPatch, "/api/incidents/{id}", model.RoleOperator, `{"title":"y"}`, http.StatusOK},
+		{"viewer delete", http.MethodDelete, "/api/incidents/{id}", model.RoleViewer, "", http.StatusForbidden},
+		{"operator delete", http.MethodDelete, "/api/incidents/{id}", model.RoleOperator, "", http.StatusForbidden},
+		{"admin delete", http.MethodDelete, "/api/incidents/{id}", model.RoleAdmin, "", http.StatusNoContent},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := f.do(tt.method, tt.path, tt.token, tt.body)
+			f := newHandlerFixture(t)
+			id := f.seed(t, "seed").ID.String()
+			rec := f.do(tt.method, strings.ReplaceAll(tt.path, "{id}", id), tt.role, tt.body)
 			if rec.Code != tt.want {
 				t.Errorf("got %d; want %d (body %s)", rec.Code, tt.want, rec.Body.String())
 			}
@@ -177,18 +127,12 @@ func TestHandlerCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
-			rec := f.do(http.MethodPost, "/api/incidents", f.admin, tt.body)
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
-			if tt.wantStatus != http.StatusCreated {
-				env := decode(t, rec)
-				if env.Error == nil || env.Error.Message != tt.wantMessage {
-					t.Errorf("error = %+v; want message %q", env.Error, tt.wantMessage)
-				}
+			rec := f.do(http.MethodPost, "/api/incidents", model.RoleAdmin, tt.body)
+			if tt.wantMessage != "" {
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			inc := decodeIncident(t, rec)
+			inc := testutil.DecodeData[model.Incident](t, rec, tt.wantStatus)
 			if inc.Title != "Router down" || inc.Description != "core" || inc.Source != "manual" {
 				t.Errorf("fields not trimmed: %+v", inc)
 			}
@@ -205,16 +149,12 @@ func TestHandlerCreate(t *testing.T) {
 func TestHandlerList(t *testing.T) {
 	t.Run("empty returns array not null", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodGet, "/api/incidents", f.viewer, "")
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
+		data, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/incidents", model.RoleViewer, ""))
+		if string(data) != "[]" {
+			t.Errorf("data = %s; want []", data)
 		}
-		env := decode(t, rec)
-		if string(env.Data) != "[]" {
-			t.Errorf("data = %s; want []", env.Data)
-		}
-		if env.Meta == nil || env.Meta.Total != 0 || env.Meta.Limit != 50 || env.Meta.Offset != 0 {
-			t.Errorf("meta = %+v; want defaults total=0 limit=50 offset=0", env.Meta)
+		if meta != (httpx.Meta{Total: 0, Limit: 50, Offset: 0}) {
+			t.Errorf("meta = %+v; want defaults total=0 limit=50 offset=0", meta)
 		}
 	})
 
@@ -222,36 +162,29 @@ func TestHandlerList(t *testing.T) {
 		f := newHandlerFixture(t)
 		f.seed(t, "a")
 		f.seed(t, "b")
-		rec := f.do(http.MethodGet, "/api/incidents?limit=999&offset=-3", f.viewer, "")
-		env := decode(t, rec)
-		if env.Meta.Total != 2 || env.Meta.Limit != 50 || env.Meta.Offset != 0 {
-			t.Errorf("meta = %+v; want total=2 limit=50 offset=0", env.Meta)
+		_, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/incidents?limit=999&offset=-3", model.RoleViewer, ""))
+		if meta != (httpx.Meta{Total: 2, Limit: 50, Offset: 0}) {
+			t.Errorf("meta = %+v; want total=2 limit=50 offset=0", meta)
 		}
 	})
 
 	t.Run("explicit pagination honoured", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodGet, "/api/incidents?limit=10&offset=20", f.viewer, "")
-		env := decode(t, rec)
-		if env.Meta.Limit != 10 || env.Meta.Offset != 20 {
-			t.Errorf("meta = %+v; want limit=10 offset=20", env.Meta)
+		_, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/incidents?limit=10&offset=20", model.RoleViewer, ""))
+		if meta.Limit != 10 || meta.Offset != 20 {
+			t.Errorf("meta = %+v; want limit=10 offset=20", meta)
 		}
 	})
 
 	t.Run("invalid monitor_id", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodGet, "/api/incidents?monitor_id=not-a-uuid", f.viewer, "")
-		if rec.Code != http.StatusBadRequest {
-			t.Fatalf("got %d; want 400", rec.Code)
-		}
-		if env := decode(t, rec); env.Error.Message != "monitor_id must be a UUID" {
-			t.Errorf("message = %q", env.Error.Message)
-		}
+		rec := f.do(http.MethodGet, "/api/incidents?monitor_id=not-a-uuid", model.RoleViewer, "")
+		testutil.AssertError(t, rec, http.StatusBadRequest, "monitor_id must be a UUID")
 	})
 
 	t.Run("valid monitor_id accepted", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodGet, "/api/incidents?monitor_id="+uuid.New().String(), f.viewer, "")
+		rec := f.do(http.MethodGet, "/api/incidents?monitor_id="+uuid.New().String(), model.RoleViewer, "")
 		if rec.Code != http.StatusOK {
 			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
 		}
@@ -273,19 +206,15 @@ func TestHandlerGet(t *testing.T) {
 		{"malformed id", "abc", http.StatusBadRequest, "id must be a UUID"},
 	}
 
+	// Read-only rows: sharing one seeded fixture is safe here.
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := f.do(http.MethodGet, "/api/incidents/"+tt.id, f.viewer, "")
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
+			rec := f.do(http.MethodGet, "/api/incidents/"+tt.id, model.RoleViewer, "")
 			if tt.wantMessage != "" {
-				if env := decode(t, rec); env.Error.Message != tt.wantMessage {
-					t.Errorf("message = %q; want %q", env.Error.Message, tt.wantMessage)
-				}
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			if inc := decodeIncident(t, rec); inc.ID != existing.ID {
+			if inc := testutil.DecodeData[model.Incident](t, rec, tt.wantStatus); inc.ID != existing.ID {
 				t.Errorf("id = %s; want %s", inc.ID, existing.ID)
 			}
 		})
@@ -344,60 +273,38 @@ func TestHandlerUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
 			existing := f.seed(t, "seed")
-			rec := f.do(http.MethodPatch, "/api/incidents/"+existing.ID.String(), f.operator, tt.body)
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
+			rec := f.do(http.MethodPatch, "/api/incidents/"+existing.ID.String(), model.RoleOperator, tt.body)
 			if tt.wantMessage != "" {
-				if env := decode(t, rec); env.Error.Message != tt.wantMessage {
-					t.Errorf("message = %q; want %q", env.Error.Message, tt.wantMessage)
-				}
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			tt.check(t, decodeIncident(t, rec))
+			tt.check(t, testutil.DecodeData[model.Incident](t, rec, tt.wantStatus))
 		})
 	}
 
 	t.Run("reopening a closed incident is a conflict", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		existing := f.seed(t, "seed")
-		path := "/api/incidents/" + existing.ID.String()
-		if rec := f.do(http.MethodPatch, path, f.operator, `{"status":"closed"}`); rec.Code != http.StatusOK {
-			t.Fatalf("close: got %d body %s", rec.Code, rec.Body.String())
-		}
-		rec := f.do(http.MethodPatch, path, f.operator, `{"status":"open"}`)
-		if rec.Code != http.StatusConflict {
-			t.Fatalf("reopen: got %d; want 409 (body %s)", rec.Code, rec.Body.String())
-		}
-		if env := decode(t, rec); env.Error.Message != "invalid status transition: closed -> open" {
-			t.Errorf("message = %q", env.Error.Message)
-		}
+		path := "/api/incidents/" + f.seed(t, "seed").ID.String()
+		testutil.DecodeData[model.Incident](t, f.do(http.MethodPatch, path, model.RoleOperator, `{"status":"closed"}`), http.StatusOK)
+		rec := f.do(http.MethodPatch, path, model.RoleOperator, `{"status":"open"}`)
+		testutil.AssertError(t, rec, http.StatusConflict, "invalid status transition: closed -> open")
 	})
 
 	t.Run("unknown id", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodPatch, "/api/incidents/"+uuid.New().String(), f.operator, `{"title":"x"}`)
-		if rec.Code != http.StatusNotFound {
-			t.Errorf("got %d; want 404", rec.Code)
-		}
+		rec := f.do(http.MethodPatch, "/api/incidents/"+uuid.New().String(), model.RoleOperator, `{"title":"x"}`)
+		testutil.AssertError(t, rec, http.StatusNotFound, "incident not found")
 	})
 }
 
 func TestHandlerDelete(t *testing.T) {
 	f := newHandlerFixture(t)
-	existing := f.seed(t, "seed")
-	id := existing.ID.String()
+	id := f.seed(t, "seed").ID.String()
 
-	if rec := f.do(http.MethodDelete, "/api/incidents/bad", f.admin, ""); rec.Code != http.StatusBadRequest {
-		t.Errorf("malformed id: got %d; want 400", rec.Code)
-	}
-	if rec := f.do(http.MethodDelete, "/api/incidents/"+id, f.admin, ""); rec.Code != http.StatusNoContent {
+	testutil.AssertError(t, f.do(http.MethodDelete, "/api/incidents/bad", model.RoleAdmin, ""), http.StatusBadRequest, "id must be a UUID")
+	if rec := f.do(http.MethodDelete, "/api/incidents/"+id, model.RoleAdmin, ""); rec.Code != http.StatusNoContent {
 		t.Fatalf("delete: got %d body %s", rec.Code, rec.Body.String())
 	}
-	if rec := f.do(http.MethodGet, "/api/incidents/"+id, f.admin, ""); rec.Code != http.StatusNotFound {
-		t.Errorf("after delete: got %d; want 404", rec.Code)
-	}
-	if rec := f.do(http.MethodDelete, "/api/incidents/"+id, f.admin, ""); rec.Code != http.StatusNotFound {
-		t.Errorf("double delete: got %d; want 404", rec.Code)
-	}
+	testutil.AssertError(t, f.do(http.MethodGet, "/api/incidents/"+id, model.RoleAdmin, ""), http.StatusNotFound, "incident not found")
+	testutil.AssertError(t, f.do(http.MethodDelete, "/api/incidents/"+id, model.RoleAdmin, ""), http.StatusNotFound, "incident not found")
 }

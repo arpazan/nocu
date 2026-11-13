@@ -7,132 +7,93 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/Pzquzer/Nocu/shared/auth"
-	"github.com/Pzquzer/Nocu/shared/config"
 	"github.com/Pzquzer/Nocu/shared/httpx"
 	"github.com/Pzquzer/Nocu/shared/model"
+	"github.com/Pzquzer/Nocu/shared/testutil"
 )
 
+// handlerFixture wires the handler behind real JWT auth. Each test (or
+// mutating subtest) builds its own so state never leaks between cases.
 type handlerFixture struct {
-	e        *echo.Echo
-	repo     *fakeRepo
-	viewer   string
-	operator string
-	admin    string
-	adminID  uuid.UUID
+	e       *echo.Echo
+	repo    *fakeRepo // reached into only for heartbeat seeding, which has no write endpoint
+	roles   map[string]string
+	adminID uuid.UUID
 }
 
 func newHandlerFixture(t *testing.T) *handlerFixture {
 	t.Helper()
 	svc, repo, _ := newService()
-	tokens := auth.NewManager(config.JWT{Secret: "unit-test-secret-value", Issuer: "t", AccessTTL: time.Minute, RefreshTTL: time.Hour})
+	tokens := testutil.NewTokenManager()
 
 	e := echo.New()
 	e.HTTPErrorHandler = httpx.ErrorHandler(slog.Default())
-	g := e.Group("/api", httpx.JWTAuth(tokens))
-	NewHandler(svc).Register(g)
+	NewHandler(svc).Register(e.Group("/api", httpx.JWTAuth(tokens)))
 
-	issue := func(id uuid.UUID, role string) string {
-		pair, err := tokens.Issue(id, role+"@example.com", []string{role})
-		if err != nil {
-			t.Fatalf("issue %s token: %v", role, err)
-		}
-		return pair.AccessToken
-	}
 	adminID := uuid.New()
 	return &handlerFixture{
-		e:        e,
-		repo:     repo,
-		viewer:   issue(uuid.New(), model.RoleViewer),
-		operator: issue(uuid.New(), model.RoleOperator),
-		admin:    issue(adminID, model.RoleAdmin),
-		adminID:  adminID,
+		e:    e,
+		repo: repo,
+		roles: map[string]string{
+			model.RoleViewer:   testutil.IssueToken(t, tokens, uuid.New(), model.RoleViewer),
+			model.RoleOperator: testutil.IssueToken(t, tokens, uuid.New(), model.RoleOperator),
+			model.RoleAdmin:    testutil.IssueToken(t, tokens, adminID, model.RoleAdmin),
+		},
+		adminID: adminID,
 	}
 }
 
-func (f *handlerFixture) do(method, path, token, body string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	if token != "" {
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
-	}
-	rec := httptest.NewRecorder()
-	f.e.ServeHTTP(rec, req)
-	return rec
-}
+func (f *handlerFixture) token(role string) string { return f.roles[role] }
 
-type envelope struct {
-	Data  json.RawMessage `json:"data"`
-	Meta  *httpx.Meta     `json:"meta"`
-	Error *httpx.Error    `json:"error"`
-}
-
-func decode(t *testing.T, rec *httptest.ResponseRecorder) envelope {
-	t.Helper()
-	var env envelope
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("decode body %q: %v", rec.Body.String(), err)
-	}
-	return env
-}
-
-func decodeMonitor(t *testing.T, rec *httptest.ResponseRecorder) model.Monitor {
-	t.Helper()
-	var m model.Monitor
-	if err := json.Unmarshal(decode(t, rec).Data, &m); err != nil {
-		t.Fatalf("decode monitor: %v", err)
-	}
-	return m
+func (f *handlerFixture) do(method, path, role, body string) *httptest.ResponseRecorder {
+	return testutil.Do(f.e, method, path, f.token(role), body)
 }
 
 const validBody = `{"name":"  API  ","url":"https://example.com/health"}`
 
 func (f *handlerFixture) seed(t *testing.T) model.Monitor {
 	t.Helper()
-	rec := f.do(http.MethodPost, "/api/monitors", f.admin, validBody)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("seed: got %d body %s", rec.Code, rec.Body.String())
-	}
-	return decodeMonitor(t, rec)
+	rec := f.do(http.MethodPost, "/api/monitors", model.RoleAdmin, validBody)
+	return testutil.DecodeData[model.Monitor](t, rec, http.StatusCreated)
 }
 
 func TestHandlerAuthorization(t *testing.T) {
-	f := newHandlerFixture(t)
-	id := f.seed(t).ID.String()
-
+	// {id} is replaced with a freshly seeded monitor for every row, so rows
+	// are independent and can run in any order or subset.
 	tests := []struct {
 		name   string
 		method string
 		path   string
-		token  string
+		role   string
 		body   string
 		want   int
 	}{
 		{"anonymous list", http.MethodGet, "/api/monitors", "", "", http.StatusUnauthorized},
-		{"viewer list", http.MethodGet, "/api/monitors", f.viewer, "", http.StatusOK},
-		{"viewer get", http.MethodGet, "/api/monitors/" + id, f.viewer, "", http.StatusOK},
-		{"viewer heartbeats", http.MethodGet, "/api/monitors/" + id + "/heartbeats", f.viewer, "", http.StatusOK},
-		{"viewer create", http.MethodPost, "/api/monitors", f.viewer, validBody, http.StatusForbidden},
-		{"operator create", http.MethodPost, "/api/monitors", f.operator, validBody, http.StatusCreated},
-		{"viewer update", http.MethodPatch, "/api/monitors/" + id, f.viewer, `{"name":"y"}`, http.StatusForbidden},
-		{"operator update", http.MethodPatch, "/api/monitors/" + id, f.operator, `{"name":"y"}`, http.StatusOK},
-		{"viewer pause", http.MethodPost, "/api/monitors/" + id + "/pause", f.viewer, "", http.StatusForbidden},
-		{"operator pause", http.MethodPost, "/api/monitors/" + id + "/pause", f.operator, "", http.StatusOK},
-		{"viewer resume", http.MethodPost, "/api/monitors/" + id + "/resume", f.viewer, "", http.StatusForbidden},
-		{"operator resume", http.MethodPost, "/api/monitors/" + id + "/resume", f.operator, "", http.StatusOK},
-		{"viewer delete", http.MethodDelete, "/api/monitors/" + id, f.viewer, "", http.StatusForbidden},
-		{"operator delete", http.MethodDelete, "/api/monitors/" + id, f.operator, "", http.StatusForbidden},
-		{"admin delete", http.MethodDelete, "/api/monitors/" + id, f.admin, "", http.StatusNoContent},
+		{"viewer list", http.MethodGet, "/api/monitors", model.RoleViewer, "", http.StatusOK},
+		{"viewer get", http.MethodGet, "/api/monitors/{id}", model.RoleViewer, "", http.StatusOK},
+		{"viewer heartbeats", http.MethodGet, "/api/monitors/{id}/heartbeats", model.RoleViewer, "", http.StatusOK},
+		{"viewer create", http.MethodPost, "/api/monitors", model.RoleViewer, validBody, http.StatusForbidden},
+		{"operator create", http.MethodPost, "/api/monitors", model.RoleOperator, validBody, http.StatusCreated},
+		{"viewer update", http.MethodPatch, "/api/monitors/{id}", model.RoleViewer, `{"name":"y"}`, http.StatusForbidden},
+		{"operator update", http.MethodPatch, "/api/monitors/{id}", model.RoleOperator, `{"name":"y"}`, http.StatusOK},
+		{"viewer pause", http.MethodPost, "/api/monitors/{id}/pause", model.RoleViewer, "", http.StatusForbidden},
+		{"operator pause", http.MethodPost, "/api/monitors/{id}/pause", model.RoleOperator, "", http.StatusOK},
+		{"viewer resume", http.MethodPost, "/api/monitors/{id}/resume", model.RoleViewer, "", http.StatusForbidden},
+		{"operator resume", http.MethodPost, "/api/monitors/{id}/resume", model.RoleOperator, "", http.StatusOK},
+		{"viewer delete", http.MethodDelete, "/api/monitors/{id}", model.RoleViewer, "", http.StatusForbidden},
+		{"operator delete", http.MethodDelete, "/api/monitors/{id}", model.RoleOperator, "", http.StatusForbidden},
+		{"admin delete", http.MethodDelete, "/api/monitors/{id}", model.RoleAdmin, "", http.StatusNoContent},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := f.do(tt.method, tt.path, tt.token, tt.body)
+			f := newHandlerFixture(t)
+			id := f.seed(t).ID.String()
+			rec := f.do(tt.method, strings.ReplaceAll(tt.path, "{id}", id), tt.role, tt.body)
 			if rec.Code != tt.want {
 				t.Errorf("got %d; want %d (body %s)", rec.Code, tt.want, rec.Body.String())
 			}
@@ -214,17 +175,12 @@ func TestHandlerCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
-			rec := f.do(http.MethodPost, "/api/monitors", f.admin, tt.body)
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
+			rec := f.do(http.MethodPost, "/api/monitors", model.RoleAdmin, tt.body)
 			if tt.wantMessage != "" {
-				if env := decode(t, rec); env.Error == nil || env.Error.Message != tt.wantMessage {
-					t.Errorf("error = %+v; want message %q", env.Error, tt.wantMessage)
-				}
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			m := decodeMonitor(t, rec)
+			m := testutil.DecodeData[model.Monitor](t, rec, tt.wantStatus)
 			if m.OwnerID == nil || *m.OwnerID != f.adminID {
 				t.Errorf("owner_id = %v; want caller %s", m.OwnerID, f.adminID)
 			}
@@ -236,26 +192,21 @@ func TestHandlerCreate(t *testing.T) {
 func TestHandlerList(t *testing.T) {
 	t.Run("empty returns array with default meta", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodGet, "/api/monitors", f.viewer, "")
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
+		data, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/monitors", model.RoleViewer, ""))
+		if string(data) != "[]" {
+			t.Errorf("data = %s; want []", data)
 		}
-		env := decode(t, rec)
-		if string(env.Data) != "[]" {
-			t.Errorf("data = %s; want []", env.Data)
-		}
-		if env.Meta == nil || env.Meta.Total != 0 || env.Meta.Limit != 50 || env.Meta.Offset != 0 {
-			t.Errorf("meta = %+v; want total=0 limit=50 offset=0", env.Meta)
+		if meta != (httpx.Meta{Total: 0, Limit: 50, Offset: 0}) {
+			t.Errorf("meta = %+v; want total=0 limit=50 offset=0", meta)
 		}
 	})
 
 	t.Run("pagination normalised", func(t *testing.T) {
 		f := newHandlerFixture(t)
 		f.seed(t)
-		rec := f.do(http.MethodGet, "/api/monitors?limit=0&offset=-1", f.viewer, "")
-		env := decode(t, rec)
-		if env.Meta.Total != 1 || env.Meta.Limit != 50 || env.Meta.Offset != 0 {
-			t.Errorf("meta = %+v", env.Meta)
+		_, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/monitors?limit=0&offset=-1", model.RoleViewer, ""))
+		if meta != (httpx.Meta{Total: 1, Limit: 50, Offset: 0}) {
+			t.Errorf("meta = %+v; want total=1 limit=50 offset=0", meta)
 		}
 	})
 
@@ -273,14 +224,13 @@ func TestHandlerList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
-			rec := f.do(http.MethodGet, "/api/monitors?active="+tt.active, f.viewer, "")
+			rec := f.do(http.MethodGet, "/api/monitors?active="+tt.active, model.RoleViewer, "")
+			if tt.want == http.StatusBadRequest {
+				testutil.AssertError(t, rec, tt.want, "active must be true or false")
+				return
+			}
 			if rec.Code != tt.want {
 				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.want, rec.Body.String())
-			}
-			if tt.want == http.StatusBadRequest {
-				if env := decode(t, rec); env.Error.Message != "active must be true or false" {
-					t.Errorf("message = %q", env.Error.Message)
-				}
 			}
 		})
 	}
@@ -301,19 +251,15 @@ func TestHandlerGet(t *testing.T) {
 		{"malformed id", "nope", http.StatusBadRequest, "id must be a UUID"},
 	}
 
+	// Read-only rows: sharing one seeded fixture is safe here.
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := f.do(http.MethodGet, "/api/monitors/"+tt.id, f.viewer, "")
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
+			rec := f.do(http.MethodGet, "/api/monitors/"+tt.id, model.RoleViewer, "")
 			if tt.wantMessage != "" {
-				if env := decode(t, rec); env.Error.Message != tt.wantMessage {
-					t.Errorf("message = %q; want %q", env.Error.Message, tt.wantMessage)
-				}
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			if m := decodeMonitor(t, rec); m.ID != existing.ID {
+			if m := testutil.DecodeData[model.Monitor](t, rec, tt.wantStatus); m.ID != existing.ID {
 				t.Errorf("id = %s; want %s", m.ID, existing.ID)
 			}
 		})
@@ -379,26 +325,19 @@ func TestHandlerUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newHandlerFixture(t)
 			before := f.seed(t)
-			rec := f.do(http.MethodPatch, "/api/monitors/"+before.ID.String(), f.operator, tt.body)
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("got %d; want %d (body %s)", rec.Code, tt.wantStatus, rec.Body.String())
-			}
+			rec := f.do(http.MethodPatch, "/api/monitors/"+before.ID.String(), model.RoleOperator, tt.body)
 			if tt.wantMessage != "" {
-				if env := decode(t, rec); env.Error.Message != tt.wantMessage {
-					t.Errorf("message = %q; want %q", env.Error.Message, tt.wantMessage)
-				}
+				testutil.AssertError(t, rec, tt.wantStatus, tt.wantMessage)
 				return
 			}
-			tt.check(t, before, decodeMonitor(t, rec))
+			tt.check(t, before, testutil.DecodeData[model.Monitor](t, rec, tt.wantStatus))
 		})
 	}
 
 	t.Run("unknown id", func(t *testing.T) {
 		f := newHandlerFixture(t)
-		rec := f.do(http.MethodPatch, "/api/monitors/"+uuid.New().String(), f.operator, `{"name":"x"}`)
-		if rec.Code != http.StatusNotFound {
-			t.Errorf("got %d; want 404", rec.Code)
-		}
+		rec := f.do(http.MethodPatch, "/api/monitors/"+uuid.New().String(), model.RoleOperator, `{"name":"x"}`)
+		testutil.AssertError(t, rec, http.StatusNotFound, "monitor not found")
 	})
 }
 
@@ -406,75 +345,66 @@ func TestHandlerPauseResume(t *testing.T) {
 	f := newHandlerFixture(t)
 	id := f.seed(t).ID.String()
 
-	rec := f.do(http.MethodPost, "/api/monitors/"+id+"/pause", f.operator, "")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("pause: got %d body %s", rec.Code, rec.Body.String())
-	}
-	if m := decodeMonitor(t, rec); m.Active {
+	paused := testutil.DecodeData[model.Monitor](t, f.do(http.MethodPost, "/api/monitors/"+id+"/pause", model.RoleOperator, ""), http.StatusOK)
+	if paused.Active {
 		t.Error("pause should set active=false")
 	}
-
-	rec = f.do(http.MethodPost, "/api/monitors/"+id+"/resume", f.operator, "")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("resume: got %d body %s", rec.Code, rec.Body.String())
-	}
-	if m := decodeMonitor(t, rec); !m.Active {
+	resumed := testutil.DecodeData[model.Monitor](t, f.do(http.MethodPost, "/api/monitors/"+id+"/resume", model.RoleOperator, ""), http.StatusOK)
+	if !resumed.Active {
 		t.Error("resume should set active=true")
 	}
 
 	for _, action := range []string{"pause", "resume"} {
-		if rec := f.do(http.MethodPost, "/api/monitors/"+uuid.New().String()+"/"+action, f.operator, ""); rec.Code != http.StatusNotFound {
-			t.Errorf("%s unknown: got %d; want 404", action, rec.Code)
-		}
-		if rec := f.do(http.MethodPost, "/api/monitors/bad/"+action, f.operator, ""); rec.Code != http.StatusBadRequest {
-			t.Errorf("%s malformed: got %d; want 400", action, rec.Code)
-		}
+		t.Run(action+" unknown id", func(t *testing.T) {
+			rec := f.do(http.MethodPost, "/api/monitors/"+uuid.New().String()+"/"+action, model.RoleOperator, "")
+			testutil.AssertError(t, rec, http.StatusNotFound, "monitor not found")
+		})
+		t.Run(action+" malformed id", func(t *testing.T) {
+			rec := f.do(http.MethodPost, "/api/monitors/bad/"+action, model.RoleOperator, "")
+			testutil.AssertError(t, rec, http.StatusBadRequest, "id must be a UUID")
+		})
 	}
 }
 
 func TestHandlerHeartbeats(t *testing.T) {
 	f := newHandlerFixture(t)
 	m := f.seed(t)
+	// Heartbeats are written by the scheduler, not over HTTP, so seed the
+	// fake repository directly.
 	f.repo.heartbeats[m.ID] = []model.MonitorHeartbeat{
 		{MonitorID: m.ID, Status: model.MonitorUp},
 		{MonitorID: m.ID, Status: model.MonitorDown},
 	}
 
 	t.Run("lists with default meta", func(t *testing.T) {
-		rec := f.do(http.MethodGet, "/api/monitors/"+m.ID.String()+"/heartbeats", f.viewer, "")
-		if rec.Code != http.StatusOK {
-			t.Fatalf("got %d body %s", rec.Code, rec.Body.String())
-		}
-		env := decode(t, rec)
+		data, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/monitors/"+m.ID.String()+"/heartbeats", model.RoleViewer, ""))
 		var items []model.MonitorHeartbeat
-		if err := json.Unmarshal(env.Data, &items); err != nil || len(items) != 2 {
-			t.Errorf("items = %s (err %v); want 2", env.Data, err)
+		if err := json.Unmarshal(data, &items); err != nil || len(items) != 2 {
+			t.Errorf("items = %s (err %v); want 2", data, err)
 		}
-		if env.Meta == nil || env.Meta.Total != 2 || env.Meta.Limit != 100 || env.Meta.Offset != 0 {
-			t.Errorf("meta = %+v; want total=2 limit=100 offset=0", env.Meta)
+		if meta != (httpx.Meta{Total: 2, Limit: 100, Offset: 0}) {
+			t.Errorf("meta = %+v; want total=2 limit=100 offset=0", meta)
 		}
 	})
 
 	t.Run("limit capped", func(t *testing.T) {
-		rec := f.do(http.MethodGet, "/api/monitors/"+m.ID.String()+"/heartbeats?limit=5000&important=true", f.viewer, "")
-		if env := decode(t, rec); env.Meta.Limit != 100 {
-			t.Errorf("limit = %d; want 100", env.Meta.Limit)
+		_, meta := testutil.DecodeList(t, f.do(http.MethodGet, "/api/monitors/"+m.ID.String()+"/heartbeats?limit=5000&important=true", model.RoleViewer, ""))
+		if meta.Limit != 100 {
+			t.Errorf("limit = %d; want 100", meta.Limit)
 		}
 	})
 
 	t.Run("empty returns array", func(t *testing.T) {
 		other := f.seed(t)
-		rec := f.do(http.MethodGet, "/api/monitors/"+other.ID.String()+"/heartbeats", f.viewer, "")
-		if env := decode(t, rec); string(env.Data) != "[]" {
-			t.Errorf("data = %s; want []", env.Data)
+		data, _ := testutil.DecodeList(t, f.do(http.MethodGet, "/api/monitors/"+other.ID.String()+"/heartbeats", model.RoleViewer, ""))
+		if string(data) != "[]" {
+			t.Errorf("data = %s; want []", data)
 		}
 	})
 
 	t.Run("malformed id", func(t *testing.T) {
-		rec := f.do(http.MethodGet, "/api/monitors/zzz/heartbeats", f.viewer, "")
-		if rec.Code != http.StatusBadRequest {
-			t.Errorf("got %d; want 400", rec.Code)
-		}
+		rec := f.do(http.MethodGet, "/api/monitors/zzz/heartbeats", model.RoleViewer, "")
+		testutil.AssertError(t, rec, http.StatusBadRequest, "id must be a UUID")
 	})
 }
 
@@ -482,16 +412,10 @@ func TestHandlerDelete(t *testing.T) {
 	f := newHandlerFixture(t)
 	id := f.seed(t).ID.String()
 
-	if rec := f.do(http.MethodDelete, "/api/monitors/bad", f.admin, ""); rec.Code != http.StatusBadRequest {
-		t.Errorf("malformed id: got %d; want 400", rec.Code)
-	}
-	if rec := f.do(http.MethodDelete, "/api/monitors/"+id, f.admin, ""); rec.Code != http.StatusNoContent {
+	testutil.AssertError(t, f.do(http.MethodDelete, "/api/monitors/bad", model.RoleAdmin, ""), http.StatusBadRequest, "id must be a UUID")
+	if rec := f.do(http.MethodDelete, "/api/monitors/"+id, model.RoleAdmin, ""); rec.Code != http.StatusNoContent {
 		t.Fatalf("delete: got %d body %s", rec.Code, rec.Body.String())
 	}
-	if rec := f.do(http.MethodGet, "/api/monitors/"+id, f.admin, ""); rec.Code != http.StatusNotFound {
-		t.Errorf("after delete: got %d; want 404", rec.Code)
-	}
-	if rec := f.do(http.MethodDelete, "/api/monitors/"+id, f.admin, ""); rec.Code != http.StatusNotFound {
-		t.Errorf("double delete: got %d; want 404", rec.Code)
-	}
+	testutil.AssertError(t, f.do(http.MethodGet, "/api/monitors/"+id, model.RoleAdmin, ""), http.StatusNotFound, "monitor not found")
+	testutil.AssertError(t, f.do(http.MethodDelete, "/api/monitors/"+id, model.RoleAdmin, ""), http.StatusNotFound, "monitor not found")
 }
