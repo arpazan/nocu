@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,9 +32,11 @@ func TestBaseBeforeCreate(t *testing.T) {
 }
 
 func TestAllListsEveryModelOnce(t *testing.T) {
+	want := []string{"Role", "User", "Incident", "Event", "ScheduledJob"}
+
 	all := All()
-	if len(all) == 0 {
-		t.Fatal("All() returned nothing")
+	if len(all) != len(want) {
+		t.Fatalf("All() has %d entries; want %d (%v)", len(all), len(want), want)
 	}
 	seen := map[string]bool{}
 	for _, m := range all {
@@ -42,6 +45,15 @@ func TestAllListsEveryModelOnce(t *testing.T) {
 			t.Errorf("%s listed twice", key)
 		}
 		seen[key] = true
+	}
+	for _, name := range want {
+		if !seen[name] {
+			t.Errorf("All() is missing %s", name)
+		}
+	}
+	// Role and User must precede anything referencing them.
+	if typeName(all[0]) != "Role" || typeName(all[1]) != "User" {
+		t.Errorf("All() must list Role then User first for FK ordering; got %s, %s", typeName(all[0]), typeName(all[1]))
 	}
 }
 
@@ -58,7 +70,7 @@ func typeName(v any) string {
 	case *ScheduledJob:
 		return "ScheduledJob"
 	default:
-		return "unknown"
+		return fmt.Sprintf("unknown(%T)", v)
 	}
 }
 
